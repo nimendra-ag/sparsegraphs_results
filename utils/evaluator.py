@@ -16,7 +16,7 @@ from sklearn.calibration import CalibratedClassifierCV
 
 
 class Evaluator:
-    def __init__(self, X_train, y_train, X_test, y_test, random_state=0):
+    def __init__(self, X_train, y_train, X_test, y_test, random_state=42):
         self.X_train = X_train
         self.X_test = X_test
         self.y_train = y_train
