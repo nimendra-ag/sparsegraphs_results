@@ -1,3 +1,6 @@
+import os, sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from dict_learners.dict_learner import DictLearner
 from ksvd import ApproximateKSVD
 
