@@ -120,7 +120,7 @@ class WL_FDDLGPU:
         X_ML_test_scaled = scaler.transform(X_ML_test)
 
         # Model evaluation
-        evaluator = Evaluator(X_ML_train_scaled, y_ML_train, X_ML_test_scaled, y_test, dl_model="wl_fddl_gpu", dataset="nci-full")
+        evaluator = Evaluator(X_ML_train_scaled, y_ML_train, X_ML_test_scaled, y_test)
         results_logistic_reg = evaluator.predict_logistic_regression()
         print(results_logistic_reg)
 
