@@ -24,14 +24,14 @@ class GraphDataLoader:
         id - (1, 33, 41, 47, 81, 83, 109, 123, 145)
         """
         print('Loading NCI dataset')
-        DATASET_DIR = "datasets/NCI_balanced"  # change this
+        DATASET_DIR = "datasets/NCI_full"  # change this
         graphs = []
         y = []
 
-        filename = f"{id}-balance.sdf"
+        filename = f"{id}total-connect.sdf"
         filepath = os.path.join(DATASET_DIR, filename)
 
-        supplier = Chem.SDMolSupplier(filepath, sanitize=False, removeHs=False)
+        supplier = Chem.SDMolSupplier(filepath, removeHs=False)
         for mol in supplier:
             if mol is None:
                 continue

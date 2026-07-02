@@ -20,19 +20,22 @@ graphs, y = data_loader.nci_full_graphs, data_loader.nci_full_labels
 G_train_full, G_test, y_train_full, y_test = train_test_split(
     graphs, y,
     test_size=0.15,
-    random_state=42
+    random_state=42,
+    stratify=y,
 )
 
 G_train, G_val, y_train, y_val = train_test_split(
     G_train_full, y_train_full,
     test_size=0.15 / 0.85,  # 15% of the full dataset
-    random_state=42
+    random_state=42,
+    stratify=y_train_full,
 )
 
 G_vocab_train, G_ML_train, y_vocab_train, y_ML_train = train_test_split(
     G_train, y_train,
     test_size=2 / 7,  # vocab_train : ML_train = 5 : 2 -> 50% / 20% of the full dataset
-    random_state=42
+    random_state=42,
+    stratify=y_train,
 )
 
 class WL_FDDLGPU:
@@ -95,6 +98,10 @@ class WL_FDDLGPU:
 
         evaluator_val.save_report()
 
+        # Thresholds tuned on the validation split, to be reused on the test
+        # split so the final test metrics are not tuned on the test labels.
+        val_thresholds = evaluator_val.get_thresholds()
+
         # ---------------------------------------------------------------------------
         # --- Evaluate on the held-out test split (use only for the final report) ---
         # ---------------------------------------------------------------------------
@@ -107,6 +114,7 @@ class WL_FDDLGPU:
         #     implementation="wl_fddl_gpu",
         #     dataset="nci_full",
         #     n_atoms=total_atoms,
+        #     fixed_thresholds=val_thresholds,  # reuse validation-tuned thresholds
         # )
 
         # # --- Native classifiers

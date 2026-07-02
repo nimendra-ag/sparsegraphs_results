@@ -33,6 +33,7 @@ class Evaluator:
         n_atoms=None,
         random_state=42,
         results_dir="results",
+        fixed_thresholds=None,
     ):
         self.X_train = X_train
         self.X_test = X_test
@@ -43,6 +44,11 @@ class Evaluator:
         self.dataset = dataset
         self.n_atoms = n_atoms
         self.results_dir = results_dir
+        # Thresholds fit on a validation set and reused on the test set.
+        # Maps model_name -> threshold. When a model is present here, its
+        # decision threshold is taken from this dict instead of being tuned
+        # on the current (test) labels, avoiding test-set leakage.
+        self.fixed_thresholds = dict(fixed_thresholds) if fixed_thresholds else {}
         os.makedirs(self.results_dir, exist_ok=True)
 
         self._model_records = []
@@ -95,7 +101,12 @@ class Evaluator:
         model.fit(self.X_train, self.y_train)
         y_scores = model.predict_proba(self.X_test)[:, 1]
 
-        if optimize_threshold:
+        if model_name in self.fixed_thresholds:
+            # Reuse a threshold fit on the validation set — do not tune on the
+            # current (test) labels.
+            threshold = self.fixed_thresholds[model_name]
+            y_pred = np.where(y_scores >= threshold, 1, -1)
+        elif optimize_threshold:
             threshold = self._find_optimal_threshold(self.y_test, y_scores)
             y_pred = np.where(y_scores >= threshold, 1, -1)  # <-- FIX: map to -1/1, not 0/1
         else:
@@ -159,6 +170,17 @@ class Evaluator:
             "Confusion Matrix": cm_global,
             "Confusion Matrix (Majority Class)": cm_majority,
             "Confusion Matrix (Minority Class)": cm_minority,
+        }
+
+    def get_thresholds(self):
+        """Return the decision threshold used for each evaluated model as a
+        {model_name: threshold} dict. Call this after running the evaluations
+        on the validation set, then pass the result as `fixed_thresholds` to a
+        new Evaluator built on the test set so the test metrics use the
+        validation-tuned thresholds instead of tuning on the test labels."""
+        return {
+            record["model_name"]: record["threshold"]
+            for record in self._model_records
         }
 
     def save_report(self):
