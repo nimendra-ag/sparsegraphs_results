@@ -12,16 +12,18 @@ class FDDLGPU(DictLearner):
             eta: float = 1.0,
             max_iter: int = 64,
             lr: float = 0.01,
-            ipm_iters: int = 15
+            ipm_iters: int = 15,
+            seed: int = 42
     ):
         super().__init__(name="FDDLGPU")
-        self.k = k  
+        self.k = k
         self.lambda1 = lambda1
         self.lambda2 = lambda2
         self.eta = eta
         self.max_iter = max_iter
         self.lr = lr
         self.ipm_iters = ipm_iters
+        self.seed = seed
         
         # Check and assign GPU automatically
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -147,9 +149,9 @@ class FDDLGPU(DictLearner):
         features = A.shape[0]
         total_atoms = self.k * n_classes
 
-        # Setup weights on GPU
-        torch.manual_seed(42)                  # <-- add this
-        torch.cuda.manual_seed(42)
+        # Setup weights on GPU — seed injected per run (Monte Carlo CV)
+        torch.manual_seed(self.seed)
+        torch.cuda.manual_seed(self.seed)
         self.D = torch.zeros((features, total_atoms), device=self.device)
         col_start = 0
         

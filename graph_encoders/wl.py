@@ -13,12 +13,13 @@ class WL(GraphEncoder):
             attributed: bool = True,
             erase_base_features: bool = True,
             n_vocab: int = 1000,
-            min_features: int = 50
+            min_features: int = 50,
+            seed: int = 42
     ):
 
         super().__init__(name="ImbalanceAwareWL")
 
-        self.seed = 42
+        self.seed = seed
         self.vocab = None
         self.graph_embeddings = None
         self.wl_iterations = wl_iterations
