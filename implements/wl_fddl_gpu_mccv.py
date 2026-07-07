@@ -22,13 +22,14 @@ from graph_encoders.wl import WL
 # Each master seed = one fully reproducible run (its own train/val/test
 # partition + its own model initialisation). 5 is the practical minimum;
 # raise to 10 for a more stable std if compute allows.
-MASTER_SEEDS = [41, 42]
+MASTER_SEEDS = [41, 42, 43, 44, 45]
 DATASET = "nci_full"
 IMPLEMENTATION = "wl_fddl_gpu"
 
 # Load data once (deterministic); the *partition* is resampled per run.
 data_loader = GraphDataLoader()
-graphs, y = data_loader.nci_full_graphs, data_loader.nci_full_labels
+graphs, y = data_loader.nci_full_graphs, data_loader.nci_full_labels  #imbalanced
+# graphs, y = data_loader.nci_balanced_graphs, data_loader.nci_balanced_labels   #balanced
 
 
 def _flatten(prefix, metrics, keys):
