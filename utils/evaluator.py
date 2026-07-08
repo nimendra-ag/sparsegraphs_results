@@ -34,6 +34,7 @@ class Evaluator:
         random_state=42,
         results_dir="results",
         fixed_thresholds=None,
+        started_at=None,
     ):
         self.X_train = X_train
         self.X_test = X_test
@@ -44,6 +45,9 @@ class Evaluator:
         self.dataset = dataset
         self.n_atoms = n_atoms
         self.results_dir = results_dir
+        # Timestamp when this evaluation run began; the run folder is named with
+        # both start and completion times so its duration is visible on disk.
+        self.started_at = started_at or datetime.now().strftime("%Y%m%d_%H%M%S")
         # Thresholds fit on a validation set and reused on the test set.
         # Maps model_name -> threshold. When a model is present here, its
         # decision threshold is taken from this dict instead of being tuned
@@ -52,6 +56,9 @@ class Evaluator:
         os.makedirs(self.results_dir, exist_ok=True)
 
         self._model_records = []
+        # Fitted estimator objects, kept so the export pipeline can serialise the
+        # exact models that produced these metrics. Maps model_name -> estimator.
+        self.fitted_models = {}
 
     def _find_optimal_threshold(self, y_true, y_scores):
         """Find the threshold that maximizes F1-score."""
@@ -99,6 +106,9 @@ class Evaluator:
 
     def _evaluate_model(self, model, model_name, optimize_threshold=True):
         model.fit(self.X_train, self.y_train)
+        # Retain the fitted estimator for export (the deployed model is exactly
+        # the one benchmarked here).
+        self.fitted_models[model_name] = model
         y_scores = model.predict_proba(self.X_test)[:, 1]
 
         if model_name in self.fixed_thresholds:
@@ -172,6 +182,11 @@ class Evaluator:
             "Confusion Matrix (Minority Class)": cm_minority,
         }
 
+    def get_fitted_models(self):
+        """Return {model_name: fitted_estimator} for every model evaluated so
+        far. Used by the export pipeline to serialise the deployable models."""
+        return dict(self.fitted_models)
+
     def get_thresholds(self):
         """Return the decision threshold used for each evaluated model as a
         {model_name: threshold} dict. Call this after running the evaluations
@@ -183,22 +198,32 @@ class Evaluator:
             for record in self._model_records
         }
 
-    def save_report(self):
-        """Create one folder per execution (named after the implementation,
-        dataset, dictionary atom count and the timestamp the execution
-        completed), and save the results txt file plus every model's
-        confusion matrix images (global / majority class / minority class)
-        into it."""
+    def save_report(self, run_folder=None):
+        """Save the results txt file plus every model's confusion matrix images
+        (global / majority class / minority class).
+
+        By default a new per-execution folder is created under `results_dir`,
+        named with the implementation, dataset, atom count and both the start
+        and completion timestamps. Pass `run_folder` to write directly into an
+        existing directory instead (used when embedding provenance metrics in an
+        artifact bundle, to avoid a redundant nested folder / over-long paths).
+        """
         completed_at = datetime.now().strftime("%Y%m%d_%H%M%S")
         atoms_part = f"_atoms{self.n_atoms}" if self.n_atoms is not None else ""
-        run_folder_name = f"{self.implementation}_{self.dataset}{atoms_part}_{completed_at}"
-        run_folder = os.path.join(self.results_dir, run_folder_name)
+        # Folder / filename stem carries both start and end timestamps.
+        run_folder_name = (
+            f"{self.implementation}_{self.dataset}{atoms_part}"
+            f"_{self.started_at}_{completed_at}"
+        )
+        if run_folder is None:
+            run_folder = os.path.join(self.results_dir, run_folder_name)
         os.makedirs(run_folder, exist_ok=True)
 
         header = (
             f"Implementation  : {self.implementation}\n"
             f"Dataset         : {self.dataset}\n"
             f"Dictionary Atoms: {self.n_atoms}\n"
+            f"Started At      : {self.started_at}\n"
             f"Completed At    : {completed_at}\n"
             + "=" * 60 + "\n\n"
         )

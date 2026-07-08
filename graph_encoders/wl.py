@@ -1,3 +1,6 @@
+import os
+import json
+
 from graph_encoders.graph_encoder import GraphEncoder
 import numpy as np
 from gensim.models.doc2vec import TaggedDocument
@@ -139,3 +142,55 @@ class WL(GraphEncoder):
             documents
         )
         return infer_graph_embeddings
+
+    # --- Persistence ---------------------------------------------------------
+    # The only *learned* state is `vocab` (the ordered, feature-selected subtree
+    # hashes). Everything else is hyperparameters. The vocab order IS the
+    # embedding column order, so it must be preserved exactly on disk.
+    _CONFIG_FILE = "wl_config.json"
+    _VOCAB_FILE = "wl_vocab.json"
+
+    def _config(self):
+        return {
+            "class": type(self).__name__,
+            "name": self.name,
+            "wl_iterations": self.wl_iterations,
+            "attributed": self.attributed,
+            "erase_base_features": self.erase_base_features,
+            "n_vocab": self.n_vocab,
+            "min_features": self.min_features,
+            "seed": self.seed,
+        }
+
+    def save(self, dirpath: str) -> None:
+        if self.vocab is None:
+            raise ValueError("WL has no vocab to save; fit the encoder first.")
+        os.makedirs(dirpath, exist_ok=True)
+
+        with open(os.path.join(dirpath, self._CONFIG_FILE), "w", encoding="utf-8") as f:
+            json.dump(self._config(), f, indent=2)
+
+        # Preserve order; words are md5 hex strings, scores are floats -> JSON safe.
+        vocab_serialisable = [[str(word), float(score)] for word, score in self.vocab]
+        with open(os.path.join(dirpath, self._VOCAB_FILE), "w", encoding="utf-8") as f:
+            json.dump(vocab_serialisable, f)
+
+    @classmethod
+    def load(cls, dirpath: str) -> "WL":
+        with open(os.path.join(dirpath, cls._CONFIG_FILE), encoding="utf-8") as f:
+            config = json.load(f)
+        with open(os.path.join(dirpath, cls._VOCAB_FILE), encoding="utf-8") as f:
+            vocab = [(word, score) for word, score in json.load(f)]
+
+        encoder = cls(
+            wl_iterations=config["wl_iterations"],
+            attributed=config["attributed"],
+            erase_base_features=config["erase_base_features"],
+            n_vocab=config["n_vocab"],
+            min_features=config["min_features"],
+            seed=config["seed"],
+        )
+        encoder.vocab = vocab
+        # The saved vocab length is authoritative for the embedding width.
+        encoder.n_vocab = len(vocab)
+        return encoder

@@ -67,11 +67,11 @@ class GraphDataLoader:
         print(f"Loaded {len(graphs)} graphs")
         return graphs, y
 
-    def load_reddit10k(self):
-        print('Loading reddit10k dataset')
-        reader = GraphSetReader("reddit10k")
+    # def load_reddit10k(self):
+    #     print('Loading reddit10k dataset')
+    #     reader = GraphSetReader("reddit10k")
 
-        graphs = reader.get_graphs()
-        y = reader.get_target()
-        print(f"Loaded {len(graphs)} graphs")
-        return graphs, y
+    #     graphs = reader.get_graphs()
+    #     y = reader.get_target()
+    #     print(f"Loaded {len(graphs)} graphs")
+    #     return graphs, y

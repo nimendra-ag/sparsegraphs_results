@@ -1,3 +1,6 @@
+import os
+import json
+
 import torch
 import numpy as np
 import random
@@ -6,7 +9,7 @@ from dict_learners.dict_learner import DictLearner
 class FDDLGPU(DictLearner):
     def __init__(
             self,
-            k: int = 128,
+            k: int = 16,
             lambda1: float = 0.1,
             lambda2: float = 0.1,
             eta: float = 1.0,
@@ -124,7 +127,9 @@ class FDDLGPU(DictLearner):
             D[:, start_idx:end_idx] = Di
         return D
 
-    def fit(self, training_graph_embeddings, y_train):
+    def fit(self, training_graph_embeddings, y_train=None):
+        if y_train is None:
+            raise ValueError("FDDLGPU.fit requires y_train (it is a supervised learner).")
         print(f"Training {self.name} on context [{self.device}]...")
         
         # Ensure y_train is numpy array for logical indexing 
@@ -197,4 +202,85 @@ class FDDLGPU(DictLearner):
             Z = self._soft_threshold(Z, self.lambda1 * t)
             
         # Downloads array structure down locally.
-        return Z.T.cpu().numpy() 
+        return Z.T.cpu().numpy()
+
+    # --- Persistence ---------------------------------------------------------
+    # Learned state needed for inference/SRC: the dictionary D (features x atoms)
+    # and, for FDDL-native SRC, the per-class mean codes M_i. X_train is a
+    # training by-product and is deliberately NOT persisted. Raw arrays go to
+    # .npy/.npz (no torch/class dependency on load); scalars to JSON.
+    _CONFIG_FILE = "fddl_config.json"
+    _D_FILE = "fddl_D.npy"
+    _STATE_FILE = "fddl_state.npz"
+
+    def _config(self):
+        return {
+            "class": type(self).__name__,
+            "name": self.name,
+            "k": self.k,
+            "lambda1": self.lambda1,
+            "lambda2": self.lambda2,
+            "eta": self.eta,
+            "max_iter": self.max_iter,
+            "lr": self.lr,
+            "ipm_iters": self.ipm_iters,
+            "seed": self.seed,
+        }
+
+    def save(self, dirpath: str) -> None:
+        if self.D is None:
+            raise ValueError("FDDLGPU has no dictionary to save; fit the learner first.")
+        os.makedirs(dirpath, exist_ok=True)
+
+        with open(os.path.join(dirpath, self._CONFIG_FILE), "w", encoding="utf-8") as f:
+            json.dump(self._config(), f, indent=2)
+
+        # D may be a torch tensor (CPU) or numpy — normalise to numpy.
+        D_np = self.D.cpu().numpy() if torch.is_tensor(self.D) else np.asarray(self.D)
+        np.save(os.path.join(dirpath, self._D_FILE), D_np)
+
+        # classes_ defines the class order; M_i is stacked in that same order.
+        classes = np.asarray(self.classes_)
+        class_sizes = np.asarray(self.class_sizes_ if self.class_sizes_ is not None else [])
+        if self.M_i:
+            M_i = np.stack([np.asarray(self.M_i[c]) for c in self.classes_], axis=0)
+        else:
+            M_i = np.empty((0,))
+        np.savez(
+            os.path.join(dirpath, self._STATE_FILE),
+            classes=classes,
+            class_sizes=class_sizes,
+            M_i=M_i,
+        )
+
+    @classmethod
+    def load(cls, dirpath: str) -> "FDDLGPU":
+        with open(os.path.join(dirpath, cls._CONFIG_FILE), encoding="utf-8") as f:
+            config = json.load(f)
+
+        learner = cls(
+            k=config["k"],
+            lambda1=config["lambda1"],
+            lambda2=config["lambda2"],
+            eta=config["eta"],
+            max_iter=config["max_iter"],
+            lr=config["lr"],
+            ipm_iters=config["ipm_iters"],
+            seed=config["seed"],
+        )
+
+        # Keep D on CPU; infer()/SRC move it to the active device on demand.
+        D_np = np.load(os.path.join(dirpath, cls._D_FILE))
+        learner.D = torch.tensor(D_np, dtype=torch.float32)
+
+        state = np.load(os.path.join(dirpath, cls._STATE_FILE), allow_pickle=False)
+        learner.classes_ = state["classes"]
+        learner.class_sizes_ = state["class_sizes"].tolist()
+        M_i_arr = state["M_i"]
+        learner.M_i = {}
+        if M_i_arr.size:
+            # Key by the same class objects as classes_ (matches fit()), so the
+            # SRC classifier's M_i[c] lookups resolve identically.
+            for i, c in enumerate(learner.classes_):
+                learner.M_i[c] = M_i_arr[i]
+        return learner

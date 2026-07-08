@@ -19,6 +19,23 @@ class GraphEncoder(ABC):
     def generate_inferencing_embeddings(self, graphs):
         pass
 
+    # --- Persistence contract ------------------------------------------------
+    # Each encoder owns its own on-disk representation (loose coupling): the
+    # artifact store only hands a directory to save()/load() and never needs to
+    # know an encoder's internals. Subclasses that are meant to be deployed must
+    # override both. `load` is a classmethod so a bundle can be rebuilt without
+    # an existing instance.
+    def save(self, dirpath: str) -> None:
+        raise NotImplementedError(
+            f"{type(self).__name__} does not implement save(); it cannot be exported."
+        )
+
+    @classmethod
+    def load(cls, dirpath: str) -> "GraphEncoder":
+        raise NotImplementedError(
+            f"{cls.__name__} does not implement load(); it cannot be restored."
+        )
+
     def _set_seed(self):
         """Creating the initial random seed."""
         random.seed(self.seed)

@@ -14,6 +14,7 @@ from utils.graph_data import GraphDataLoader
 from utils.evaluator import Evaluator
 from utils.seeding import seed_everything, derive_seeds
 from utils.src_classifier import SRCClassifier
+from utils import pipeline
 from dict_learners.fddl_gpu import FDDLGPU
 from graph_encoders.wl import WL
 
@@ -22,7 +23,7 @@ from graph_encoders.wl import WL
 # Each master seed = one fully reproducible run (its own train/val/test
 # partition + its own model initialisation). 5 is the practical minimum;
 # raise to 10 for a more stable std if compute allows.
-MASTER_SEEDS = [41, 42]
+MASTER_SEEDS = [41, 42, 43, 44, 45]
 DATASET = "nci_full"
 IMPLEMENTATION = "wl_fddl_gpu"
 
@@ -70,26 +71,21 @@ def run_once(master_seed):
         stratify=y_train,
     )
 
-    # --- 2. Fit WL + FDDL (seeds injected) -----------------------------------
+    # --- 2. Fit WL + FDDL via the shared pipeline (seeds injected) -----------
     wl = WL(seed=s_wl)
-    graph_embeddings = wl.generate_training_embeddings(G_vocab_train, y_vocab_train)
-
     fddl_gpu = FDDLGPU(seed=s_fddl)
     scaler = MaxAbsScaler()
 
-    fddl_gpu.fit(training_graph_embeddings=graph_embeddings, y_train=y_vocab_train)
-    total_atoms = fddl_gpu.D.shape[1]
+    pipeline.fit_encoder_and_dictionary(wl, fddl_gpu, G_vocab_train, y_vocab_train)
+    total_atoms = fddl_gpu.n_atoms()
 
-    graph_embeddings_ml_train = wl.generate_inferencing_embeddings(G_ML_train)
-    X_ML_train = fddl_gpu.infer(graph_embeddings_ml_train)
-    X_ML_train_scaled = scaler.fit_transform(X_ML_train)
+    # Codes for every downstream split, computed once and reused.
+    X_ML_train_scaled = scaler.fit_transform(pipeline.sparse_codes(wl, fddl_gpu, G_ML_train))
+    X_ML_val_scaled = scaler.transform(pipeline.sparse_codes(wl, fddl_gpu, G_val))
+    X_ML_test_scaled = scaler.transform(pipeline.sparse_codes(wl, fddl_gpu, G_test))
 
     # --- 3. Tune thresholds on the VALIDATION split --------------------------
     print("Tuning thresholds on the validation split...")
-    graph_embeddings_ml_val = wl.generate_inferencing_embeddings(G_val)
-    X_ML_val = fddl_gpu.infer(graph_embeddings_ml_val)
-    X_ML_val_scaled = scaler.transform(X_ML_val)
-
     evaluator_val = Evaluator(
         X_ML_train_scaled, y_ML_train, X_ML_val_scaled, y_val,
         implementation=IMPLEMENTATION, dataset=DATASET,
@@ -103,10 +99,6 @@ def run_once(master_seed):
 
     # --- 4. Final evaluation on the held-out TEST split ----------------------
     print("Evaluating on the held-out test split...")
-    graph_embeddings_ml_test = wl.generate_inferencing_embeddings(G_test)
-    X_ML_test = fddl_gpu.infer(graph_embeddings_ml_test)
-    X_ML_test_scaled = scaler.transform(X_ML_test)
-
     evaluator_test = Evaluator(
         X_ML_train_scaled, y_ML_train, X_ML_test_scaled, y_test,
         implementation=IMPLEMENTATION, dataset=DATASET,
@@ -123,7 +115,9 @@ def run_once(master_seed):
     row.update(_flatten("LinearSVM", evaluator_test.predict_svm(), sk_keys))
     row.update(_flatten("RandomForest", evaluator_test.predict_random_forest(), sk_keys))
 
-    # SRC-native classifiers (deterministic given the trained dictionary)
+    # SRC-native classifiers (deterministic given the trained dictionary).
+    # SRC scores against the encoder-space embeddings (not the sparse codes).
+    graph_embeddings_ml_test = wl.generate_inferencing_embeddings(G_test)
     src_pure = SRCClassifier(fddl_gpu, gamma=0.0)
     row.update(_flatten("SRC_pure", src_pure.evaluate(graph_embeddings_ml_test, y_test), src_keys))
     src_fddl = SRCClassifier(fddl_gpu, gamma=0.5)
@@ -149,11 +143,17 @@ def _t_ci_halfwidth(vals, confidence=0.95):
     return float(crit * sem)
 
 
-def aggregate_and_report(rows, total_atoms):
-    """Print mean +/- sample-std (+ 95% t-CI) and persist per-run + summary CSV."""
+def aggregate_and_report(rows, total_atoms, started_at):
+    """Print mean +/- sample-std (+ 95% t-CI) and persist per-run + summary CSV.
+
+    The output folder is named with both the run's start and end timestamps.
+    """
     metric_names = list(rows[0].keys())
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_dir = os.path.join("results", f"mc_cv_{IMPLEMENTATION}_{DATASET}_atoms{total_atoms}_{ts}")
+    ended_at = datetime.now().strftime("%Y%m%d_%H%M%S")
+    out_dir = os.path.join(
+        "results",
+        f"mc_cv_{IMPLEMENTATION}_{DATASET}_atoms{total_atoms}_{started_at}_{ended_at}",
+    )
     os.makedirs(out_dir, exist_ok=True)
 
     # Per-run raw metrics (one row per seed) — every run reproducible on demand.
@@ -183,9 +183,10 @@ def aggregate_and_report(rows, total_atoms):
 
 
 if __name__ == "__main__":
+    started_at = datetime.now().strftime("%Y%m%d_%H%M%S")
     rows, atoms = [], None
     for seed in MASTER_SEEDS:
         print(f"\n########## Monte Carlo CV run | master_seed={seed} ##########")
         row, atoms = run_once(seed)
         rows.append(row)
-    aggregate_and_report(rows, atoms)
+    aggregate_and_report(rows, atoms, started_at)
