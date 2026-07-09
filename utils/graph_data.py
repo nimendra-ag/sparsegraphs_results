@@ -16,7 +16,7 @@ class GraphDataLoader:
     def __init__(self):
         if not self._initialized:
             self.nci_full_graphs, self.nci_full_labels = self.load_nci_full()
-            self.nci_balanced_graphs, self.nci_balanced_labels = self.load_nci_balanced()
+            # self.nci_balanced_graphs, self.nci_balanced_labels = self.load_nci_balanced()
             # self.reddit10k_graphs, self.reddit10k_labels = self.load_reddit10k()
             self._initialized = True
 
