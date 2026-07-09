@@ -126,6 +126,10 @@ class WL(GraphEncoder):
 
             i = i + 1
 
+        norms = np.linalg.norm(sparse_vector, axis=1, keepdims=True)
+        norms[norms == 0] = 1.0
+        sparse_vector = sparse_vector / norms
+
         return sparse_vector
 
     def generate_training_embeddings(self, graphs, labels):
