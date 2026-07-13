@@ -1,6 +1,12 @@
 import os
 import networkx as nx
 from rdkit import Chem
+from rdkit import RDLogger
+
+# Silence RDKit's per-molecule sanitization warnings/errors (e.g. "Explicit
+# valence ... is greater than permitted"). We count the skipped molecules
+# ourselves instead of streaming every failure to the terminal.
+RDLogger.DisableLog("rdApp.*")
 
 
 class GraphDataLoader:
@@ -32,8 +38,10 @@ class GraphDataLoader:
         filepath = os.path.join(DATASET_DIR, filename)
 
         supplier = Chem.SDMolSupplier(filepath, removeHs=False)
+        skipped = 0
         for mol in supplier:
             if mol is None:
+                skipped += 1
                 continue
 
             G = nx.Graph()
@@ -64,7 +72,7 @@ class GraphDataLoader:
             graphs.append(G)
             y.append(label)
 
-        print(f"Loaded {len(graphs)} graphs")
+        print(f"Loaded {len(graphs)} graphs, skipped {skipped} unsanitizable molecules")
         return graphs, y
 
     # def load_reddit10k(self):
