@@ -5,6 +5,7 @@ from graph_encoders.graph_encoder import GraphEncoder
 import numpy as np
 from gensim.models.doc2vec import TaggedDocument
 from graph_encoders.wlkernalsubtree import WeisfeilerLehmanHashing
+from utils.knee import find_knee_cut
 
 from collections import Counter
 
@@ -97,10 +98,38 @@ class WL(GraphEncoder):
         )
 
         # selection
+        
         scores = np.array([x[1] for x in scored_vocab])
 
-        threshold = scores.mean() - scores.std()
-        trimmed_vocab = [item for item in scored_vocab if item[1] >= threshold]
+        #-------------------------------------
+        #------------ Mean - Std -------------
+        #-------------------------------------
+        # threshold = scores.mean() - scores.std()
+        # trimmed_vocab = [item for item in scored_vocab if item[1] >= threshold]
+
+        #-------------------------------------
+        #---Arbitary Percentile Cut (50th)----
+        #-------------------------------------
+        # print(f"Total Features {len(scores)}")
+        # l_scores = len(scores)
+        # decile_ = 0.50
+        # temp = int(l_scores * decile_)
+        # threshold = scores[temp]
+
+        #-------------------------------------
+        #------------ Knee Cut ---------------
+        #-------------------------------------
+        # scored_vocab is sorted descending, so `scores` is a decreasing curve.
+        # Cut at the knee/elbow (data-driven) instead of a fixed percentile.
+        print(f"Total Features {len(scores)}")
+        n_keep, threshold = find_knee_cut(scores, sorted_desc=True)
+        print(f"knee cut at index {n_keep} (threshold {threshold:.6g})")
+
+        # Keep the full (pre-trim) score curve so the elbow can be plotted later,
+        # once the artifact bundle directory exists (see utils/export.py).
+        self.selection_scores_ = scores
+
+        trimmed_vocab = scored_vocab[:n_keep]
 
         # fallback if too few selected
         print(f"selected {len(trimmed_vocab)} from the adaptive selection method")
