@@ -21,6 +21,7 @@ class WL(GraphEncoder):
         self.seed = 42
         self.vocab = None
         self.graph_embeddings = None
+        self.hash_table = {}
         self.wl_iterations = wl_iterations
         self.attributed = attributed
         self.erase_base_features = erase_base_features
@@ -30,12 +31,16 @@ class WL(GraphEncoder):
     def create_wl_hash(self, graph_list):
 
         documents = []
+        self.hash_table = {}
 
         for graph in graph_list:
             g = self._check_graph(graph)
 
             document = WeisfeilerLehmanHashing(
                 g, self.wl_iterations, self.attributed, self.erase_base_features)
+
+            for token, entry in document.get_hash_table().items():
+                self.hash_table.setdefault(token, entry)
 
             documents.append(document)
 

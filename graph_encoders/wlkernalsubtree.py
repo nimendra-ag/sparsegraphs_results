@@ -28,6 +28,7 @@ class WeisfeilerLehmanHashing(object):
         self.graph = graph
         self.attributed = attributed
         self.erase_base_features = erase_base_features
+        self.hash_table = {}
         self._set_features()
         self._do_recursions()
 
@@ -41,7 +42,12 @@ class WeisfeilerLehmanHashing(object):
             self.features = {
                 node: self.graph.degree(node) for node in self.graph.nodes()
             }
-        self.extracted_features = {k: [str(v)] for k, v in self.features.items()}
+        self.features = {k: str(v) for k, v in self.features.items()}
+        self.signatures = dict(self.features)
+        self.extracted_features = {k: [v] for k, v in self.features.items()}
+
+        for node, feature in self.features.items():
+            self.hash_table.setdefault(feature, (0, feature))
 
     def _erase_base_features(self):
         """
@@ -50,7 +56,7 @@ class WeisfeilerLehmanHashing(object):
         for k, v in self.extracted_features.items():
             del self.extracted_features[k][0]
 
-    def _do_a_recursion(self):
+    def _do_a_recursion(self, depth):
         """
         The method does a single WL recursion.
 
@@ -58,6 +64,7 @@ class WeisfeilerLehmanHashing(object):
             * **new_features** *(dict of strings)* - The hash table with extracted WL features.
         """
         new_features = {}
+        new_signatures = {}
         for node in self.graph.nodes():
             nebs = self.graph.neighbors(node)
             degs = [self.features[neb] for neb in nebs]
@@ -66,17 +73,23 @@ class WeisfeilerLehmanHashing(object):
             hash_object = hashlib.md5(features.encode())
             hashing = hash_object.hexdigest()
             new_features[node] = hashing
+
+            neb_sigs = [self.signatures[neb] for neb in self.graph.neighbors(node)]
+            signature = f"{self.signatures[node]}[{','.join(sorted(neb_sigs))}]"[:60]
+            new_signatures[node] = signature
+            self.hash_table.setdefault(hashing, (depth, signature))
+
         self.extracted_features = {
             k: self.extracted_features[k] + [v] for k, v in new_features.items()
         }
-        return new_features
+        return new_features, new_signatures
 
     def _do_recursions(self):
         """
         The method does a series of WL recursions.
         """
-        for _ in range(self.wl_iterations):
-            self.features = self._do_a_recursion()
+        for depth in range(1, self.wl_iterations + 1):
+            self.features, self.signatures = self._do_a_recursion(depth)
         if self.erase_base_features:
             self._erase_base_features()
 
@@ -95,3 +108,9 @@ class WeisfeilerLehmanHashing(object):
             for node, features in self.extracted_features.items()
             for feature in features
         ]
+
+    def get_hash_table(self) -> Dict[str, tuple]:
+        """
+        Return the hash table mapping each WL token to its (depth, human-readable signature).
+        """
+        return self.hash_table
