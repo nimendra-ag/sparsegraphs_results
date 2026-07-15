@@ -2,17 +2,19 @@ import os, sys, json
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import numpy as np
+import torch
 
 from dict_learners.dict_learner import DictLearner
-from dict_learners.ksvd import ApproximateKSVD
+from ksvd import ApproximateKSVD
 
 class AKSVD(DictLearner):
     def __init__(
             self,
-            dimensions: int = 16,
+            dimensions: int = 350,
             max_iter: int = 10,
             tol: float = 1e-6,
             n_non_zero_coefs: int = 10,
+            seed: int = 42,
     ):
         super().__init__(name="AKSVD")
         self._dictionary = None
@@ -20,12 +22,17 @@ class AKSVD(DictLearner):
         self.max_iter = max_iter
         self.tol = tol
         self.n_non_zero_coefs = n_non_zero_coefs
+        self.seed = seed
         self.aksvd = ApproximateKSVD(n_components=self.dimensions, max_iter=self.max_iter, tol=self.tol,
                  transform_n_nonzero_coefs=self.n_non_zero_coefs)
 
     def fit(self, training_graph_embeddings, y_train=None):
         # y_train is ignored: AKSVD is unsupervised. It is accepted only so the
         # dict-learner call site is uniform across supervised/unsupervised types.
+        # Seed injected per run (Monte Carlo CV) — only the random-init fallback in
+        # ApproximateKSVD._initialize is stochastic, but we seed for reproducibility.
+        torch.manual_seed(self.seed)
+        torch.cuda.manual_seed(self.seed)
         self._dictionary = self.aksvd.fit(training_graph_embeddings).components_
 
         # self._embedding = self.aksvd.transform(training_graph_embeddings)
@@ -53,6 +60,7 @@ class AKSVD(DictLearner):
             "max_iter": self.max_iter,
             "tol": self.tol,
             "n_non_zero_coefs": self.n_non_zero_coefs,
+            "seed": self.seed,
         }
 
     def save(self, dirpath: str) -> None:
@@ -61,7 +69,12 @@ class AKSVD(DictLearner):
         os.makedirs(dirpath, exist_ok=True)
         with open(os.path.join(dirpath, self._CONFIG_FILE), "w", encoding="utf-8") as f:
             json.dump(self._config(), f, indent=2)
-        np.save(os.path.join(dirpath, self._DICT_FILE), np.asarray(self._dictionary))
+        # _dictionary is a GPU tensor (ApproximateKSVD runs on CUDA); move it to
+        # host memory before converting to a NumPy array for np.save.
+        dictionary = self._dictionary
+        if isinstance(dictionary, torch.Tensor):
+            dictionary = dictionary.detach().cpu().numpy()
+        np.save(os.path.join(dirpath, self._DICT_FILE), np.asarray(dictionary))
 
     @classmethod
     def load(cls, dirpath: str) -> "AKSVD":
@@ -72,8 +85,12 @@ class AKSVD(DictLearner):
             max_iter=config["max_iter"],
             tol=config["tol"],
             n_non_zero_coefs=config["n_non_zero_coefs"],
+            seed=config.get("seed", 42),
         )
         components = np.load(os.path.join(dirpath, cls._DICT_FILE))
+        # Move the dictionary back onto the estimator's device so transform()
+        # (which builds a Gram matrix against GPU tensors) doesn't mix backends.
+        components = torch.from_numpy(components).float().to(learner.aksvd.device)
         learner._dictionary = components
         # Restore the inner estimator's dictionary so transform() works.
         learner.aksvd.components_ = components
