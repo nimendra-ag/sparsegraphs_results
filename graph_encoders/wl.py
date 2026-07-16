@@ -5,7 +5,7 @@ from graph_encoders.graph_encoder import GraphEncoder
 import numpy as np
 from gensim.models.doc2vec import TaggedDocument
 from graph_encoders.wlkernalsubtree import WeisfeilerLehmanHashing
-from utils.knee import find_knee_cut
+from utils.elbow import find_elbow_cut
 
 from collections import Counter
 
@@ -110,26 +110,26 @@ class WL(GraphEncoder):
         #-------------------------------------
         #---Arbitary Percentile Cut (25th)----
         #-------------------------------------
-        print(f"Total Features {len(scores)}")
-        l_scores = len(scores)
-        decile_ = 0.25
-        temp = int(l_scores * decile_)
-        threshold = scores[temp]
-        trimmed_vocab = [item for item in scored_vocab if item[1] >= threshold]
+        # print(f"Total Features {len(scores)}")
+        # l_scores = len(scores)
+        # decile_ = 0.25
+        # temp = int(l_scores * decile_)
+        # threshold = scores[temp]
+        # trimmed_vocab = [item for item in scored_vocab if item[1] >= threshold]
 
         #-------------------------------------
-        #------------ Knee Cut ---------------
+        #------------ Elbow Cut --------------
         #-------------------------------------
         # scored_vocab is sorted descending, so `scores` is a decreasing curve.
-        # Cut at the knee/elbow (data-driven) instead of a fixed percentile.
-        # print(f"Total Features {len(scores)}")
-        # n_keep, threshold = find_knee_cut(scores, sorted_desc=True)
-        # print(f"knee cut at index {n_keep} (threshold {threshold:.6g})")
+        # Cut at the elbow (data-driven) instead of a fixed percentile.
+        print(f"Total Features {len(scores)}")
+        n_keep, threshold = find_elbow_cut(scores, sorted_desc=True)
+        print(f"elbow cut at index {n_keep} (threshold {threshold:.6g})")
 
         # # Keep the full (pre-trim) score curve so the elbow can be plotted later,
         # # once the artifact bundle directory exists (see utils/export.py).
-        # self.selection_scores_ = scores
-        # trimmed_vocab = scored_vocab[:n_keep]
+        self.selection_scores_ = scores
+        trimmed_vocab = scored_vocab[:n_keep]
 
 
         # fallback if too few selected

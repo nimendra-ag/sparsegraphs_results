@@ -126,15 +126,15 @@ def export_pipeline(
     )
 
     # --- analytics: feature-selection elbow plot ------------------------------
-    # The WL encoder stashes the full pre-trim score curve; render the knee/elbow
+    # The WL encoder stashes the full pre-trim score curve; render the elbow
     # diagnostic into the bundle so the vocab-size decision is auditable.
     selection_scores = getattr(encoder, "selection_scores_", None)
     if selection_scores is not None:
-        from utils.knee import plot_knee_curve
+        from utils.elbow import plot_elbow_curve
         analytics_dir = os.path.join(bundle_dir, "analytics")
-        plot_path = plot_knee_curve(
+        plot_path = plot_elbow_curve(
             selection_scores,
-            os.path.join(analytics_dir, "wl_feature_selection_knee.png"),
+            os.path.join(analytics_dir, "wl_feature_selection_elbow.png"),
             title=f"{implementation} / {dataset}",
         )
         print(f"Saved feature-selection elbow plot -> {plot_path}")
