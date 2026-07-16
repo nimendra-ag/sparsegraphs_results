@@ -149,7 +149,7 @@ def plot_elbow_curve(scores, save_path, sorted_desc=True, min_keep=1, title=None
         f"elbow keep     : {n_keep} ({100.0 * n_keep / n:.1f}%)",
         f"elbow threshold: {threshold:.6g}",
         f"25th pct keep  : {min(int(round(n * 0.25)), n)}",
-        f"50th pct keep  : {min(int(round(n * 0.50)), n)}  (old cut)",
+        f"50th pct keep  : {min(int(round(n * 0.50)), n)}",
         f"75th pct keep  : {min(int(round(n * 0.75)), n)}",
     ]
     ax.text(

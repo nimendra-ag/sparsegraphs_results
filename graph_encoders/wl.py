@@ -98,8 +98,16 @@ class WL(GraphEncoder):
         )
 
         # selection
-        
+
         scores = np.array([x[1] for x in scored_vocab])
+
+        # Normalize the discriminative scores to [0, 1] by dividing by the max.
+        # Scores are non-negative, so 0 stays the natural "no signal" floor and
+        # the top-ranked feature becomes 1.0. scored_vocab is scaled to match.
+        max_score = scores.max()
+        if max_score > 0:
+            scores = scores / max_score
+            scored_vocab = [(word, score / max_score) for word, score in scored_vocab]
 
         #-------------------------------------
         #------------ Mean - Std -------------
