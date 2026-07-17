@@ -130,14 +130,15 @@ def export_pipeline(
     # diagnostic into the bundle so the vocab-size decision is auditable.
     selection_scores = getattr(encoder, "selection_scores_", None)
     if selection_scores is not None:
-        from utils.elbow import plot_elbow_curve
+        from utils.elbow import plot_elbow_suite
         analytics_dir = os.path.join(bundle_dir, "analytics")
-        plot_path = plot_elbow_curve(
+        plot_paths = plot_elbow_suite(
             selection_scores,
-            os.path.join(analytics_dir, "wl_feature_selection_elbow.png"),
+            analytics_dir,
             title=f"{implementation} / {dataset}",
         )
-        print(f"Saved feature-selection elbow plot -> {plot_path}")
+        for plot_path in plot_paths:
+            print(f"Saved feature-selection elbow plot -> {plot_path}")
 
     # --- sparse-code cache: raw (pre-scale) codes for classifier experiments -
     if save_code_cache:
