@@ -9,7 +9,7 @@ from dict_learners.dict_learner import DictLearner
 class FDDLGPU(DictLearner):
     def __init__(
             self,
-            k: int = 160,
+            k: int = 256,
             lambda1: float = 0.1,
             lambda2: float = 0.1,
             eta: float = 1.0,
@@ -42,7 +42,22 @@ class FDDLGPU(DictLearner):
         return torch.sign(X) * torch.nn.functional.relu(torch.abs(X) - tau)
     
     def _step_size(self, D: torch.Tensor):
-        # ord=2 calculates spectral norm (largest singular value)
+        # ord=2 calculates spectral norm (largest singular value).
+        # GUARD: matrix_norm(ord=2) is an SVD that HANGS INDEFINITELY (and
+        # uninterruptibly, since it blocks inside a CUDA C call) if D contains
+        # NaN/Inf. Check first so a poisoned dictionary fails loudly here instead
+        # of freezing the terminal. This .item() forces a sync, but only once
+        # per call and it is the cheap price of not hanging.
+        if not torch.isfinite(D).all():
+            n_nan = int(torch.isnan(D).sum())
+            n_inf = int(torch.isinf(D).sum())
+            bad_cols = int((~torch.isfinite(D)).any(dim=0).sum())
+            raise FloatingPointError(
+                f"_step_size: dictionary D is non-finite (nan={n_nan}, inf={n_inf}, "
+                f"{bad_cols}/{D.shape[1]} atoms affected). Aborting before the SVD, "
+                f"which would hang. Most likely an atom was normalised by a zero "
+                f"norm (0/0) during init — see the zero-norm warning in fit()."
+            )
         L = 2.0 * (torch.linalg.matrix_norm(D, ord=2) ** 2) + 2.0 * self.lambda2 * (1.0 + self.eta)
         return 1.0 / (1.05 * L)
 
@@ -130,7 +145,9 @@ class FDDLGPU(DictLearner):
     def fit(self, training_graph_embeddings, y_train=None):
         if y_train is None:
             raise ValueError("FDDLGPU.fit requires y_train (it is a supervised learner).")
-        print(f"Training {self.name} on context [{self.device}]...")
+        print(f"Training {self.name} on context [{self.device}] "
+              f"(k={self.k}/class, max_iter={self.max_iter}, ipm_iters={self.ipm_iters})...",
+              flush=True)
         
         # Ensure y_train is numpy array for logical indexing 
         if torch.is_tensor(y_train): y_train = y_train.cpu().numpy()
@@ -153,27 +170,60 @@ class FDDLGPU(DictLearner):
         
         features = A.shape[0]
         total_atoms = self.k * n_classes
+        print(f"  [init] features={features}, classes={n_classes}, "
+              f"class_sizes={self.class_sizes_}, total_atoms={total_atoms}", flush=True)
 
         # Setup weights on GPU — seed injected per run (Monte Carlo CV)
         torch.manual_seed(self.seed)
         torch.cuda.manual_seed(self.seed)
         self.D = torch.zeros((features, total_atoms), device=self.device)
         col_start = 0
-        
+
         for i in range(n_classes):
             Ai = A[:, col_start:col_start + self.class_sizes_[i]]
             idx = torch.randint(0, self.class_sizes_[i], (self.k,), device=self.device)
             Di = Ai[:, idx]
-            Di = Di / torch.norm(Di, dim=0) 
+            norms = torch.norm(Di, dim=0)
+            # A sampled column with zero norm is an all-zero (degenerate) training
+            # embedding. Dividing by it gives 0/0 = NaN, which later makes the
+            # spectral-norm SVD hang forever. Warn loudly and leave those atoms as
+            # zero columns (guarded division) so the run stays diagnosable.
+            n_zero = int((norms == 0).sum())
+            if n_zero:
+                print(f"  [init][WARN] class {self.classes_[i]}: sampled {n_zero}/{self.k} "
+                      f"zero-norm (all-zero) embeddings as atoms; leaving them as zero "
+                      f"columns instead of dividing by zero. Consider dropping all-zero "
+                      f"training rows upstream.", flush=True)
+                norms = norms.clone()
+                norms[norms == 0] = 1.0
+            Di = Di / norms
             self.D[:, i * self.k:(i + 1) * self.k] = Di
             col_start += self.class_sizes_[i]
 
+        if not torch.isfinite(self.D).all():
+            print(f"  [init][WARN] initial D has "
+                  f"{int((~torch.isfinite(self.D)).sum())} non-finite entries", flush=True)
+
         X = torch.zeros((total_atoms, sum(self.class_sizes_)), device=self.device)
 
-        # Execute Alternate Optimizations directly on VRAM 
+        # Execute Alternate Optimizations directly on VRAM. Each iteration is
+        # timed and D's health is checked so a stall or divergence is pinned to a
+        # specific iteration (flush=True so the last line survives even a hang).
+        import time as _time
         for it in range(self.max_iter):
+            _t0 = _time.perf_counter()
+            print(f"  [iter {it + 1:>2}/{self.max_iter}] update_X...", end="", flush=True)
             X = self._update_X(A, self.D, X, self.k, n_classes, self.class_sizes_)
+            print(" update_D...", end="", flush=True)
             self.D = self._update_D(A, self.D, X, self.k, n_classes, self.class_sizes_)
+            if self.device.type == "cuda":
+                torch.cuda.synchronize()
+            d_nan = int(torch.isnan(self.D).sum())
+            print(f" done in {_time.perf_counter() - _t0:6.2f}s"
+                  f" | max|X|={X.abs().max().item():.3g} D_nan={d_nan}", flush=True)
+            if d_nan:
+                print(f"  [iter {it + 1}][WARN] D diverged to NaN this iteration; "
+                      f"subsequent _step_size() will abort.", flush=True)
 
         # Transfer back to RAM for external pipelines
         self.X_train = X.cpu().numpy()

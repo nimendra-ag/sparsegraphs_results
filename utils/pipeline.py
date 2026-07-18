@@ -18,13 +18,48 @@ import numpy as np
 import joblib
 
 
+def _drop_zero_embeddings(embeddings, labels):
+    """Drop rows whose embedding is the all-zero vector, keeping labels aligned.
+
+    An all-zero encoder embedding is a degenerate sample: none of its features
+    survived the encoder's vocabulary (e.g. a tiny molecule whose WL subtrees
+    were all trimmed by the feature-selection cut). Such a row carries no signal
+    for dictionary learning, and — critically — it is what lets a dictionary
+    learner sample a zero-norm atom and divide by zero (0/0 -> NaN). Removing it
+    here, at the encoder->dictionary boundary, keeps the training matrix clean.
+
+    This is applied to the TRAINING path only. Inference (val/test) goes through
+    `sparse_codes`, which never calls this — every val/test graph must still get
+    a code/prediction, even if its embedding happens to be all-zero.
+
+    Returns (embeddings, labels, n_dropped) with the same types as the inputs
+    (labels stays None if it was None, i.e. the unsupervised case).
+    """
+    keep = np.any(embeddings != 0, axis=1)
+    n_dropped = int((~keep).sum())
+    if n_dropped:
+        print(f"  [filter] dropped {n_dropped}/{embeddings.shape[0]} all-zero "
+              f"training embeddings before dictionary fit "
+              f"(no signal; would poison atom init).", flush=True)
+        embeddings = embeddings[keep]
+        if labels is not None:
+            labels = np.asarray(labels)[keep]
+    return embeddings, labels, n_dropped
+
+
 def fit_encoder_and_dictionary(encoder, dict_learner, G_vocab_train, y_vocab_train):
     """Fit the encoder's vocabulary and then the dictionary on that vocabulary.
 
-    Returns the training graph embeddings (encoder space) in case a caller wants
+    All-zero training embeddings are dropped between the two steps (see
+    `_drop_zero_embeddings`) so the dictionary learner never sees a degenerate,
+    signal-free sample. This affects TRAINING only; the val/test inference path
+    (`sparse_codes`) keeps every row.
+
+    Returns the (filtered) training graph embeddings in case a caller wants
     them; the encoder and dict_learner are mutated in place.
     """
     train_emb = encoder.generate_training_embeddings(G_vocab_train, y_vocab_train)
+    train_emb, y_vocab_train, _ = _drop_zero_embeddings(train_emb, y_vocab_train)
     dict_learner.fit(training_graph_embeddings=train_emb, y_train=y_vocab_train)
     return train_emb
 
