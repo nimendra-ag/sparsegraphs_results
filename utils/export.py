@@ -136,6 +136,10 @@ def export_pipeline(
             selection_scores,
             analytics_dir,
             title=f"{implementation} / {dataset}",
+            # mirror the cut the encoder actually applied so the figure and the
+            # trained vocab cannot disagree
+            selection=getattr(encoder, "selection", "elbow"),
+            energy=getattr(encoder, "energy", 0.99),
         )
         for plot_path in plot_paths:
             print(f"Saved feature-selection elbow plot -> {plot_path}")
