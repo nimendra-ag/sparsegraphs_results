@@ -5,3 +5,5 @@ datasets
 
 **/__pycache__/
 cm/
+# large sparse-code cache (exceeds GitHub 100MB limit)
+code_cache/sparse_codes.npz
