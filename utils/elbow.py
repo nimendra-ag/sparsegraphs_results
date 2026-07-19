@@ -59,6 +59,60 @@ def find_elbow_cut(scores, sorted_desc=True, min_keep=1):
     return n_keep, float(y[n_keep - 1])
 
 
+def find_energy_cut(scores, energy=0.99, sorted_desc=True, min_keep=1):
+    """Keep the top features that together hold a fraction of the total score.
+
+    An alternative to the geometric elbow. Where ``find_elbow_cut`` asks *where
+    does the marginal value of the next feature collapse*, this asks *how many
+    of the top features do I need to retain X% of the signal*. On the brutally
+    front-loaded curves this pipeline produces, the elbow is statistically
+    conservative -- it cuts as soon as individual scores go flat, discarding a
+    long tail of weak-but-not-worthless features that still lift downstream AUC.
+    An energy threshold reaches deliberately into that tail: it walks the sorted
+    curve accumulating score and stops once the cumulative sum first reaches
+    ``energy`` of the grand total.
+
+    The score used here is exactly the ranking score -- ``total_presence *
+    discriminative_score`` in the WL encoder -- so "energy" means "fraction of
+    the summed discriminative mass", not an information-theoretic quantity.
+
+    Parameters
+    ----------
+    scores : array-like of float
+        Feature scores, assumed sorted descending (highest first). Pass
+        ``sorted_desc=False`` to have them sorted here. Assumed non-negative,
+        as the WL scores are; a cumulative fraction is only meaningful then.
+    energy : float, default 0.99
+        Target fraction of the total score to retain, in (0, 1]. 0.99 keeps
+        enough features to cover 99% of the summed score. Larger keeps more.
+    min_keep : int, default 1
+        Floor on how many features to keep, for near-degenerate curves.
+
+    Returns
+    -------
+    (n_keep, threshold) : (int, float)
+        Keep ``n_keep`` features; ``threshold`` is the score of the last kept
+        one (equivalently: keep every feature with ``score >= threshold``).
+    """
+    scores = np.asarray(scores, dtype=float)
+    y = scores if sorted_desc else np.sort(scores)[::-1]
+    n = y.size
+
+    total = float(y.sum())
+    if n == 0:
+        return 0, 0.0
+    if total <= 0:                            # flat / all-zero -> keep all
+        return n, float(y[-1])
+
+    # smallest prefix whose cumulative score first reaches energy * total.
+    # searchsorted finds the first index where the running sum crosses the
+    # target; +1 turns that 0-based index into a count.
+    target = float(energy) * total
+    idx = int(np.searchsorted(np.cumsum(y), target))
+    n_keep = min(max(idx + 1, int(min_keep)), n)
+    return n_keep, float(y[n_keep - 1])
+
+
 # --- plotting -------------------------------------------------------------
 # The curve is brutally front-loaded: a couple of hundred features carry the
 # signal and the remaining ~97% is a flat tail. One linear plot cannot show

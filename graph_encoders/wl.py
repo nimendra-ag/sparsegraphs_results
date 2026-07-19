@@ -5,7 +5,7 @@ from graph_encoders.graph_encoder import GraphEncoder
 import numpy as np
 from gensim.models.doc2vec import TaggedDocument
 from graph_encoders.wlkernalsubtree import WeisfeilerLehmanHashing
-from utils.elbow import find_elbow_cut
+from utils.elbow import find_elbow_cut, find_energy_cut
 
 from collections import Counter
 
@@ -18,6 +18,8 @@ class WL(GraphEncoder):
             erase_base_features: bool = True,
             n_vocab: int = 1000,
             min_features: int = 50,
+            selection: str = "energy",
+            energy: float = 0.99,
             seed: int = 42
     ):
 
@@ -31,6 +33,12 @@ class WL(GraphEncoder):
         self.erase_base_features = erase_base_features
         self.n_vocab = n_vocab
         self.min_features = min_features
+        # Feature-selection cut on the sorted discriminative-score curve:
+        #   "energy" -> keep the top features holding `energy` of the total
+        #               score (reaches into the tail, recovers AUC);
+        #   "elbow"  -> max-distance-to-chord elbow (conservative, fastest).
+        self.selection = selection
+        self.energy = energy
 
     def create_wl_hash(self, graph_list):
 
@@ -126,13 +134,29 @@ class WL(GraphEncoder):
         # trimmed_vocab = [item for item in scored_vocab if item[1] >= threshold]
 
         #-------------------------------------
-        #------------ Elbow Cut --------------
+        #-------- Adaptive Feature Cut -------
         #-------------------------------------
         # scored_vocab is sorted descending, so `scores` is a decreasing curve.
-        # Cut at the elbow (data-driven) instead of a fixed percentile.
+        # Both cuts are data-driven (no fixed percentile). The energy cut keeps
+        # the top features covering `self.energy` of the summed score, which
+        # reaches into the weak tail the elbow discards -- trading a little
+        # runtime for the AUC that tail carries. See utils/elbow.py.
         print(f"Total Features {len(scores)}")
-        n_keep, threshold = find_elbow_cut(scores, sorted_desc=True)
-        print(f"elbow cut at index {n_keep} (threshold {threshold:.6g})")
+        if self.selection == "elbow":
+            n_keep, threshold = find_elbow_cut(scores, sorted_desc=True)
+            print(f"elbow cut at index {n_keep} (threshold {threshold:.6g})")
+        elif self.selection == "energy":
+            n_keep, threshold = find_energy_cut(
+                scores, energy=self.energy, sorted_desc=True,
+                min_keep=self.min_features,
+            )
+            print(f"energy cut ({self.energy:.4g}) at index {n_keep} "
+                  f"(threshold {threshold:.6g})")
+        else:
+            raise ValueError(
+                f"unknown selection method {self.selection!r}; "
+                "expected 'energy' or 'elbow'"
+            )
 
         # # Keep the full (pre-trim) score curve so the elbow can be plotted later,
         # # once the artifact bundle directory exists (see utils/export.py).
@@ -201,6 +225,8 @@ class WL(GraphEncoder):
             "erase_base_features": self.erase_base_features,
             "n_vocab": self.n_vocab,
             "min_features": self.min_features,
+            "selection": self.selection,
+            "energy": self.energy,
             "seed": self.seed,
         }
 
@@ -230,6 +256,11 @@ class WL(GraphEncoder):
             erase_base_features=config["erase_base_features"],
             n_vocab=config["n_vocab"],
             min_features=config["min_features"],
+            # .get keeps older bundles (written before these keys existed)
+            # loadable; their default matches the pre-energy elbow behaviour
+            # only if you set selection="elbow" at call sites.
+            selection=config.get("selection", "energy"),
+            energy=config.get("energy", 0.99),
             seed=config["seed"],
         )
         encoder.vocab = vocab

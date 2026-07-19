@@ -1,0 +1,126 @@
+Implementation  : wl_fddl_gpu
+Dataset         : nci_full
+Dictionary Atoms: 512
+Started At      : 20260719_111301
+Completed At    : 20260719_111908
+============================================================
+
+===== Logistic Regression (threshold=0.795) =====
+Accuracy  : 0.9358
+Precision : 0.3519
+Recall    : 0.4385
+F1-Score  : 0.3904
+ROC-AUC   : 0.8359
+PR-AUC    : 0.3142
+
+Classification Report
+              precision    recall  f1-score   support
+
+          -1       0.97      0.96      0.97      5281
+           1       0.35      0.44      0.39       260
+
+    accuracy                           0.94      5541
+   macro avg       0.66      0.70      0.68      5541
+weighted avg       0.94      0.94      0.94      5541
+
+Confusion Matrix (whole dataset)
+[[5071  210]
+ [ 146  114]]
+
+Confusion Matrix (majority class = -1 vs rest)
+[[ 114  146]
+ [ 210 5071]]
+
+Confusion Matrix (minority class = 1 vs rest)
+[[5071  210]
+ [ 146  114]]
+
+===== Gradient Boosting (threshold=0.110) =====
+Accuracy  : 0.9442
+Precision : 0.4061
+Recall    : 0.4077
+F1-Score  : 0.4069
+ROC-AUC   : 0.8020
+PR-AUC    : 0.4054
+
+Classification Report
+              precision    recall  f1-score   support
+
+          -1       0.97      0.97      0.97      5281
+           1       0.41      0.41      0.41       260
+
+    accuracy                           0.94      5541
+   macro avg       0.69      0.69      0.69      5541
+weighted avg       0.94      0.94      0.94      5541
+
+Confusion Matrix (whole dataset)
+[[5126  155]
+ [ 154  106]]
+
+Confusion Matrix (majority class = -1 vs rest)
+[[ 106  154]
+ [ 155 5126]]
+
+Confusion Matrix (minority class = 1 vs rest)
+[[5126  155]
+ [ 154  106]]
+
+===== Linear SVM (threshold=0.206) =====
+Accuracy  : 0.9417
+Precision : 0.3811
+Recall    : 0.3885
+F1-Score  : 0.3848
+ROC-AUC   : 0.8284
+PR-AUC    : 0.2999
+
+Classification Report
+              precision    recall  f1-score   support
+
+          -1       0.97      0.97      0.97      5281
+           1       0.38      0.39      0.38       260
+
+    accuracy                           0.94      5541
+   macro avg       0.68      0.68      0.68      5541
+weighted avg       0.94      0.94      0.94      5541
+
+Confusion Matrix (whole dataset)
+[[5117  164]
+ [ 159  101]]
+
+Confusion Matrix (majority class = -1 vs rest)
+[[ 101  159]
+ [ 164 5117]]
+
+Confusion Matrix (minority class = 1 vs rest)
+[[5117  164]
+ [ 159  101]]
+
+===== Random Forest (threshold=0.299) =====
+Accuracy  : 0.9401
+Precision : 0.3953
+Recall    : 0.5231
+F1-Score  : 0.4503
+ROC-AUC   : 0.8386
+PR-AUC    : 0.3922
+
+Classification Report
+              precision    recall  f1-score   support
+
+          -1       0.98      0.96      0.97      5281
+           1       0.40      0.52      0.45       260
+
+    accuracy                           0.94      5541
+   macro avg       0.69      0.74      0.71      5541
+weighted avg       0.95      0.94      0.94      5541
+
+Confusion Matrix (whole dataset)
+[[5073  208]
+ [ 124  136]]
+
+Confusion Matrix (majority class = -1 vs rest)
+[[ 136  124]
+ [ 208 5073]]
+
+Confusion Matrix (minority class = 1 vs rest)
+[[5073  208]
+ [ 124  136]]
