@@ -128,8 +128,11 @@ class WL(GraphEncoder):
         #-------------------------------------
         # print(f"Total Features {len(scores)}")
         # l_scores = len(scores)
-        # decile_ = 0.25
-        # temp = int(l_scores * decile_)
+        # decile_ = 1
+        # # Clamp to the last valid index: int(N * 1.0) == N would run one past the
+        # # end of `scores`. decile_ == 1 therefore keeps every feature (threshold
+        # # = the smallest score); decile_ < 1 keeps the top fraction.
+        # temp = min(int(l_scores * decile_), l_scores - 1)
         # threshold = scores[temp]
         # trimmed_vocab = [item for item in scored_vocab if item[1] >= threshold]
 
