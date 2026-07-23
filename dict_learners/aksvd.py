@@ -1,13 +1,10 @@
-import os, sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from dict_learners.dict_learner import DictLearner
 from dict_learners.ksvd import ApproximateKSVD
 
 class AKSVD(DictLearner):
     def __init__(
             self,
-            dimensions: int = 16,
+            dimensions: int = 128,
             max_iter: int = 10,
             tol: float = 1e-6,
             n_non_zero_coefs: int = 10,
