@@ -459,7 +459,7 @@ class WLAKSVDInterpreter:
         pipeline, so the token strings are byte-for-byte identical to those in
         the learned vocabulary.
         """
-        from karateclub.utils.treefeatures import WeisfeilerLehmanHashing
+        from graph_encoders.wlkernalsubtree import WeisfeilerLehmanHashing
 
         g = self.wl._check_graph(graph)
         wl_hash = WeisfeilerLehmanHashing(
