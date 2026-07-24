@@ -103,7 +103,9 @@ class WLAKSVDInterpreter:
         self.class_counts: Counter = wl.class_counts
         self.unique_classes: List = sorted(set(training_labels))
 
+    # ─────────────────────────────────────────────────────────────────────────
     # Private helpers
+    # ─────────────────────────────────────────────────────────────────────────
 
     def _label_name(self, label: Any) -> str:
         """Return human-readable class name from label_map, or str(label)."""
@@ -457,7 +459,7 @@ class WLAKSVDInterpreter:
         pipeline, so the token strings are byte-for-byte identical to those in
         the learned vocabulary.
         """
-        from graph_encoders.wlkernalsubtree import WeisfeilerLehmanHashing
+        from karateclub.utils.treefeatures import WeisfeilerLehmanHashing
 
         g = self.wl._check_graph(graph)
         wl_hash = WeisfeilerLehmanHashing(
@@ -748,22 +750,28 @@ class WLAKSVDInterpreter:
                 )
 
         # ── Level 4 ───────────────────────────────────────────────────────────
-        # Reuse sparse_code computed above (no second embedding call)
-        sims = cosine_similarity(sparse_code, self.training_sparse_codes)[0]
-        top_sim_idx = np.argsort(sims)[::-1][:top_k_similar]
-
         lines += [
             "",
             "── LEVEL 4: Similar Training Compounds "
             "────────────────────────────────────",
         ]
-        for rank, i in enumerate(top_sim_idx, start=1):
+        if explanation["n_active_atoms"] == 0:
             lines.append(
-                f"  #{rank}"
-                f"  idx={i:>5d}"
-                f"  label={self._label_name(self.training_labels[i]):<16}"
-                f"  similarity={sims[i] * 100:.1f}%"
+                "  Skipped — this molecule produced no active dictionary atoms.\n"
+                "  The molecule's structural patterns were not seen during training,\n"
+                "  so cosine similarity against training compounds is not meaningful."
             )
+        else:
+            # Reuse sparse_code computed above (no second embedding call)
+            sims = cosine_similarity(sparse_code, self.training_sparse_codes)[0]
+            top_sim_idx = np.argsort(sims)[::-1][:top_k_similar]
+            for rank, i in enumerate(top_sim_idx, start=1):
+                lines.append(
+                    f"  #{rank}"
+                    f"  idx={i:>5d}"
+                    f"  label={self._label_name(self.training_labels[i]):<16}"
+                    f"  similarity={sims[i] * 100:.1f}%"
+                )
 
         # ── Level 6 (from the most contributing atom) ─────────────────────────
         if explanation["top_atoms"]:
