@@ -1,0 +1,6 @@
+{
+  "Logistic Regression": 0.7014601826667786,
+  "Gradient Boosting": 0.015770581566118755,
+  "Linear SVM": 0.5932774615257455,
+  "Random Forest": 0.336
+}
