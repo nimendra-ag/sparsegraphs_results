@@ -15,7 +15,7 @@ class GraphDataLoader:
 
     def __init__(self):
         if not self._initialized:
-            self.nci_full_graphs, self.nci_full_labels = self.load_nci_full()
+            self.nci_full_graphs, self.nci_full_labels, self.nci_full_smiles= self.load_nci_full()
             # self.nci_balanced_graphs, self.nci_balanced_labels = self.load_nci_balanced()
             # self.reddit10k_graphs, self.reddit10k_labels = self.load_reddit10k()
             self._initialized = True
@@ -28,6 +28,8 @@ class GraphDataLoader:
         DATASET_DIR = "datasets/NCI_full"  # change this
         graphs = []
         y = []
+        smiles_list = []
+
 
         filename = f"{id}total-connect.sdf"
         filepath = os.path.join(DATASET_DIR, filename)
@@ -37,6 +39,7 @@ class GraphDataLoader:
             if mol is None:
                 continue
 
+            smiles = Chem.MolToSmiles(mol)
             G = nx.Graph()
 
             # Add atoms as nodes
@@ -64,10 +67,11 @@ class GraphDataLoader:
             label = int(float(mol.GetProp("value")))
             graphs.append(G)
             y.append(label)
+            smiles_list.append(smiles)
 
         print(f"Loaded {len(graphs)} graphs")
-        return graphs, y
-    
+        return graphs, y, smiles_list
+
     def load_nci_balanced(self, id=1):
         """
         id - (1, 33, 41, 47, 81, 83, 109, 123, 145)
