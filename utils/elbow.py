@@ -122,7 +122,7 @@ def find_energy_cut(scores, energy=0.99, sorted_desc=True, min_keep=1):
 # --- plotting -------------------------------------------------------------
 # The curve is brutally front-loaded: a couple of hundred features carry the
 # signal and the remaining ~97% is a flat tail. One linear plot cannot show
-# both ends, so every run renders four views of the same curve:
+# both ends, so every run renders five views of the same curve:
 #
 #   elbow.png         linear, full range. The reference figure -- the chord and
 #                     the max-distance geometry are only truthful here.
@@ -130,6 +130,11 @@ def find_energy_cut(scores, energy=0.99, sorted_desc=True, min_keep=1):
 #   elbow_logx.png    log rank: spreads the head across the page.
 #   elbow_loglog.png  log rank + log score: additionally exposes the tail's
 #                     decay, which every linear view pins to zero.
+#   elbow_cdf.png     the *cumulative* view ("Curve B"): the running score mass
+#                     normalised to end at 1. The four above plot the raw score
+#                     (Curve A); this plots its integral, so the height at any
+#                     rank reads directly as "fraction of total signal kept" --
+#                     the quantity the energy cut thresholds.
 #
 # (log-x + log-y *is* log-log -- one figure, not two.)
 #
@@ -544,6 +549,99 @@ def plot_elbow_curve_loglog(scores, save_path, sorted_desc=True, min_keep=1, tit
     return _save(fig, save_path)
 
 
+def plot_cdf_curve(scores, save_path, sorted_desc=True, min_keep=1, title=None,
+                   selection="elbow", energy=0.99):
+    """Render "Curve B": the cumulative score-mass CDF, and save it to disk.
+
+    Every other figure in this module plots the raw score against rank ("Curve
+    A"). This one plots its *running integral, normalised by the total*::
+
+        F(k) = (sum of the top-k scores) / (sum of all scores)
+
+    which is a genuine CDF over the score-mass measure: non-decreasing, and 1.0
+    at the last feature by construction (dividing by the total is exactly what
+    pins the right end to 1). The height at rank ``k`` therefore reads directly
+    as "fraction of the total discriminative mass held by the top ``k``
+    features" -- the quantity the energy cut thresholds. The energy cut is just
+    the horizontal line ``F = energy`` and where it first meets the curve.
+
+    Drawn on a log rank axis: these curves are so front-loaded that on linear
+    ranks the CDF shoots to ~0.9 within the first couple hundred of ~10k
+    features and then looks like a flat line at 1.0, hiding everything. Log rank
+    spreads the head where all the action is. Both cuts are marked, each
+    annotated with the mass fraction it actually covers, so the gap between "how
+    many features" and "how much signal" is visible at a glance.
+    """
+    plt = _plt()
+    y, n, elbow, energy_cut, active = _prepare(scores, sorted_desc, min_keep,
+                                               selection, energy)
+    total = float(y.sum())
+    # F is the CDF; the degenerate all-zero curve has no mass to accumulate, so
+    # fall back to a uniform ramp purely to keep the axes drawable.
+    F = np.cumsum(y) / total if total > 0 else np.linspace(1.0 / n, 1.0, n)
+    x = np.arange(1, n + 1)                   # 1-based ranks: log(0) undefined
+    active_idx = energy_cut.idx if active == "energy" else elbow.idx
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.set_xscale("log")
+
+    ax.plot(x, F, color="#1f77b4", lw=1.8, label="Curve B: cumulative score fraction (CDF)")
+    ax.axvspan(1, active_idx + 1, color="#2ca02c", alpha=0.08)
+
+    # the right end is pinned to 1.0 -- the whole reason we divide by the total
+    ax.axhline(1.0, color="#999999", ls=":", lw=1.0)
+    ax.text(n, 1.005, "ends at 1.0  (=100% of total score mass)",
+            ha="right", va="bottom", fontsize=8, color="#666666")
+
+    # the energy target: a horizontal line at F = energy, met at the energy cut
+    ax.axhline(energy, color=ENERGY_COLOR, ls="--", lw=1.2)
+
+    # faint percentile references, for parity with the other figures
+    for p, c in PCT_COLORS.items():
+        idx = min(int(round(n * p / 100.0)), n - 1)
+        ax.axvline(idx + 1, color=c, ls="--", lw=0.8, alpha=0.5)
+
+    # elbow cut: keeps few features, but see how much mass they already hold
+    sel = " (selected)" if active == "elbow" else ""
+    ax.axvline(elbow.idx + 1, color=ELBOW_COLOR, ls="--", lw=1.0, alpha=0.85)
+    ax.scatter([elbow.idx + 1], [F[elbow.idx]], color=ELBOW_COLOR, zorder=5, s=80,
+               edgecolor="black", linewidth=0.6,
+               label=f"elbow: keep {elbow.n_keep} ({100.0 * elbow.n_keep / n:.1f}%) "
+                     f"-> {100.0 * F[elbow.idx]:.1f}% of mass{sel}")
+
+    # energy cut: the smallest prefix whose mass first reaches `energy`
+    sel = " (selected)" if active == "energy" else ""
+    ax.axvline(energy_cut.idx + 1, color=ENERGY_COLOR, ls="--", lw=1.2)
+    ax.scatter([energy_cut.idx + 1], [F[energy_cut.idx]], color=ENERGY_COLOR, zorder=5,
+               s=80, edgecolor="black", linewidth=0.6,
+               label=f"energy {energy:g}: keep {energy_cut.n_keep} "
+                     f"({100.0 * energy_cut.n_keep / n:.1f}%) "
+                     f"-> {100.0 * F[energy_cut.idx]:.1f}% of mass{sel}")
+    ax.annotate(
+        f"{energy:g} of mass\nreached at rank {energy_cut.n_keep}",
+        xy=(energy_cut.idx + 1, energy),
+        xytext=(max((energy_cut.idx + 1) * 1.6, 3.0), energy - 0.18),
+        arrowprops=dict(arrowstyle="->", color=ENERGY_COLOR),
+        fontsize=9, color=ENERGY_COLOR, ha="left",
+    )
+
+    ax.set_xlabel("feature rank (1-based, log scale)")
+    ax.set_ylabel("cumulative fraction of total score mass (CDF)")
+    ax.set_title(_title(" — cumulative mass (Curve B / CDF)", title, n))
+    ax.set_ylim(0, 1.05)
+    ax.legend(loc="lower right", fontsize=8, framealpha=0.9)
+    ax.grid(True, which="both", alpha=0.25)
+    _summary_box(ax, n, elbow, energy_cut, active, energy, y=0.55)
+    ax.text(
+        0.5, -0.13,
+        "height = fraction of the summed discriminative score held by the top-k features; "
+        "the energy cut keeps the fewest features whose height reaches the dashed line.",
+        transform=ax.transAxes, fontsize=7.5, color="#666666", ha="center", va="top",
+    )
+
+    return _save(fig, save_path)
+
+
 def plot_elbow_suite(scores, analytics_dir, stem="wl_feature_selection_elbow",
                      sorted_desc=True, min_keep=1, title=None,
                      selection="elbow", energy=0.99):
@@ -556,7 +654,7 @@ def plot_elbow_suite(scores, analytics_dir, stem="wl_feature_selection_elbow",
     agree.
 
     Returns the written paths, in the order described at the top of this
-    section (linear, zoomed linear, log rank, log-log).
+    section (linear, zoomed linear, log rank, log-log, cumulative CDF).
     """
     import os
     variants = (
@@ -564,6 +662,7 @@ def plot_elbow_suite(scores, analytics_dir, stem="wl_feature_selection_elbow",
         (plot_elbow_curve_zoom, f"{stem}_zoom.png"),
         (plot_elbow_curve_logx, f"{stem}_logx.png"),
         (plot_elbow_curve_loglog, f"{stem}_loglog.png"),
+        (plot_cdf_curve, f"{stem}_cdf.png"),
     )
     return [
         fn(scores, os.path.join(analytics_dir, filename),
