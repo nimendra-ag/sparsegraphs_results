@@ -26,14 +26,14 @@ from graph_encoders.wl import WL
 from dict_learners.fddl_gpu import FDDLGPU
 
 
-DATASET = "ogbg_molhiv"
+DATASET = "nci_full"
 IMPLEMENTATION = "wl_fddl_gpu"
 EXPORT_SEED = 42
 
 
 if __name__ == "__main__":
     data_loader = GraphDataLoader()
-    graphs, y = data_loader.load("ogbg_molhiv")
+    graphs, y = data_loader.load("nci_full")
 
     encoder = WL(seed=EXPORT_SEED)
     dict_learner = FDDLGPU(seed=EXPORT_SEED)

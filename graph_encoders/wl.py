@@ -155,10 +155,22 @@ class WL(GraphEncoder):
             )
             print(f"energy cut ({self.energy:.4g}) at index {n_keep} "
                   f"(threshold {threshold:.6g})")
+        elif self.selection == "none":
+            # No cut: score and rank as usual, then keep everything. Exists for
+            # the comparison arms in pca/, which need the full scored vocabulary
+            # so that selection is the ONLY thing differing between arms.
+            #
+            # Not expressible as energy=1.0: features scoring exactly 0 (equal
+            # presence in both classes) make the cumulative-score curve plateau
+            # before the last rank, so an energy target of 1.0 still cuts them.
+            # MUTAG has such features; nci_full does not. Hence an explicit path.
+            n_keep, threshold = len(scores), float(scores[-1])
+            print(f"no cut: keeping all {n_keep} features "
+                  f"(lowest score {threshold:.6g})")
         else:
             raise ValueError(
                 f"unknown selection method {self.selection!r}; "
-                "expected 'energy' or 'elbow'"
+                "expected 'energy', 'elbow' or 'none'"
             )
 
         # # Keep the full (pre-trim) score curve so the elbow can be plotted later,

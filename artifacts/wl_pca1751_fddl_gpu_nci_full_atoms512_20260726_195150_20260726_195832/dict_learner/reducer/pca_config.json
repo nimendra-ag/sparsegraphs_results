@@ -1,0 +1,13 @@
+{
+  "class": "PCAReducer",
+  "n_components": 1751,
+  "energy": null,
+  "max_components": 2048,
+  "center": true,
+  "whiten": false,
+  "dtype": "float32",
+  "random_state": 42,
+  "n_components_": 1751,
+  "n_features_in_": 10130,
+  "explained_variance_at_cut": 0.9855161686364227
+}

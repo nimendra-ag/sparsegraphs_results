@@ -16,8 +16,14 @@ def _encoder_loaders():
         from graph_encoders.wl import WL
         return WL
 
+    def _wl_full():
+        # Comparison arm only (pca/): WL with the feature-selection cut disabled.
+        from pca.wl_full import WLFull
+        return WLFull
+
     return {
         "WL": _wl,
+        "WLFull": _wl_full,
     }
 
 
@@ -30,9 +36,16 @@ def _dict_learner_loaders():
         from dict_learners.aksvd import AKSVD
         return AKSVD
 
+    def _pca_then_dict_learner():
+        # Comparison arm only (pca/): a PCA reduction composed with a real
+        # dictionary learner, presented to the pipeline as one DictLearner.
+        from pca.pca_dict_learner import PCAThenDictLearner
+        return PCAThenDictLearner
+
     return {
         "FDDLGPU": _fddl_gpu,
         "AKSVD": _aksvd,
+        "PCAThenDictLearner": _pca_then_dict_learner,
     }
 
 

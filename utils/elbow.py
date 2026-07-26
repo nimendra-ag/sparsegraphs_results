@@ -162,11 +162,16 @@ def _prepare(scores, sorted_desc, min_keep, selection="elbow", energy=0.99):
     cut actually applied. ``selection`` therefore only decides emphasis, not
     which cuts are computed.
 
+    ``selection="none"`` means no cut was applied at all (the encoder kept its
+    full scored vocabulary -- see the comparison arms in ``pca/``). Both cuts are
+    still drawn, for reference, but neither is flagged as selected and the shaded
+    "kept" region covers the whole curve, which is the truth for such a run.
+
     Returns
     -------
     (y, n, elbow, energy_cut, active) : (ndarray, int, Cut, Cut, str)
-        ``active`` is ``selection`` ("elbow" or "energy") -- the cut that was
-        really used to trim the vocab, shaded green in the figures.
+        ``active`` is ``selection`` ("elbow", "energy" or "none") -- the cut that
+        was really used to trim the vocab, shaded green in the figures.
     """
     scores = np.asarray(scores, dtype=float)
     y = scores if sorted_desc else np.sort(scores)[::-1]
@@ -178,8 +183,21 @@ def _prepare(scores, sorted_desc, min_keep, selection="elbow", energy=0.99):
     gk, gt = find_energy_cut(y, energy=energy, sorted_desc=True, min_keep=min_keep)
     energy_cut = Cut(gk, gk - 1, gt)
 
-    active = selection if selection in ("elbow", "energy") else "elbow"
+    active = selection if selection in ("elbow", "energy", "none") else "elbow"
     return y, n, elbow, energy_cut, active
+
+
+def _active_cut(active, elbow, energy_cut, n, y):
+    """The cut the encoder actually applied, as a ``Cut``.
+
+    ``"none"`` resolves to the whole curve, so every figure's shaded region and
+    zoom window follow from one rule instead of each view special-casing it.
+    """
+    if active == "energy":
+        return energy_cut
+    if active == "none":
+        return Cut(n, n - 1, float(y[-1]))
+    return elbow
 
 
 def _summary_box(ax, n, elbow, energy_cut, active, energy, x=0.985, y=0.60):
@@ -202,6 +220,10 @@ def _summary_box(ax, n, elbow, energy_cut, active, energy, x=0.985, y=0.60):
         f"50th pct keep  : {min(int(round(n * 0.50)), n)}",
         f"75th pct keep  : {min(int(round(n * 0.75)), n)}",
     ]
+    if active == "none":
+        # Neither cut carries the "selected" tag in this case, so say plainly
+        # what was applied rather than leaving the reader to infer it.
+        lines.insert(1, f"cut applied    : none (all {n} kept)")
     ax.text(
         x, y, "\n".join(lines), transform=ax.transAxes,
         fontsize=8, family="monospace", ha="right", va="top",
@@ -230,7 +252,7 @@ def _draw_linear(ax, y, n, elbow, energy_cut, active, energy, title, hi=None):
     span = y[0] - y[-1] + 1e-12
     x_span = hi if hi else n         # scales the annotation offsets to the view
 
-    active_cut = energy_cut if active == "energy" else elbow
+    active_cut = _active_cut(active, elbow, energy_cut, n, y)
 
     ax.plot(ranks, y, color="#1f77b4", lw=1.6, label="feature score (sorted)")
     ax.axvspan(0, active_cut.idx, color="#2ca02c", alpha=0.08)
@@ -363,7 +385,11 @@ def plot_elbow_curve_zoom(scores, save_path, sorted_desc=True, min_keep=1, title
     plt = _plt()
     y, n, elbow, energy_cut, active = _prepare(scores, sorted_desc, min_keep,
                                                selection, energy)
-    active_keep = energy_cut.n_keep if active == "energy" else elbow.n_keep
+    # With no cut applied the "active" region is the whole curve, which would
+    # make the zoom window the full range and defeat the point of this view.
+    # Fall back to framing the elbow, which is what the head of the curve is.
+    active_keep = (elbow.n_keep if active == "none"
+                   else _active_cut(active, elbow, energy_cut, n, y).n_keep)
     hi = min(int(zoom_to) if zoom_to else max(4 * active_keep, 50), n - 1)
 
     fig, ax = plt.subplots(figsize=(10, 6))
@@ -395,7 +421,7 @@ def plot_elbow_curve_logx(scores, save_path, sorted_desc=True, min_keep=1, title
                                                selection, energy)
     x = np.arange(1, n + 1)          # 1-based: log(0) is undefined
     span = y[0] - y[-1] + 1e-12
-    active_idx = energy_cut.idx if active == "energy" else elbow.idx
+    active_idx = _active_cut(active, elbow, energy_cut, n, y).idx
 
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.set_xscale("log")
@@ -487,7 +513,7 @@ def plot_elbow_curve_loglog(scores, save_path, sorted_desc=True, min_keep=1, tit
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.set_xscale("log")
     ax.set_yscale("log")
-    active_idx = energy_cut.idx if active == "energy" else elbow.idx
+    active_idx = _active_cut(active, elbow, energy_cut, n, y).idx
 
     ax.plot(x[pos], y[pos], color="#1f77b4", lw=1.6, label="feature score (sorted)")
     ax.axvspan(1, active_idx + 1, color="#2ca02c", alpha=0.08)
@@ -580,7 +606,7 @@ def plot_cdf_curve(scores, save_path, sorted_desc=True, min_keep=1, title=None,
     # fall back to a uniform ramp purely to keep the axes drawable.
     F = np.cumsum(y) / total if total > 0 else np.linspace(1.0 / n, 1.0, n)
     x = np.arange(1, n + 1)                   # 1-based ranks: log(0) undefined
-    active_idx = energy_cut.idx if active == "energy" else elbow.idx
+    active_idx = _active_cut(active, elbow, energy_cut, n, y).idx
 
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.set_xscale("log")
