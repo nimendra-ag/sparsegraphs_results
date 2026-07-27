@@ -33,7 +33,9 @@ from graph_encoders.wl import WL
 # exits, the OS reclaims 100% of its RAM and destroys the CUDA context, so all
 # VRAM — including fragmentation and any driver spill into shared memory — is
 # returned. This is why seed 5 runs as fast as seed 1 (no cross-seed leak).
-MASTER_SEEDS = [41, 42, 43, 44, 45]
+# 5 distinct seeds drawn at random from 0-100 (no repeats: a repeated seed
+# would re-run an identical partition and overwrite its own row in the CSV).
+MASTER_SEEDS = np.random.choice(101, size=5, replace=False).tolist()
 DATASET = "nci_full"
 IMPLEMENTATION = "wl_fddl_gpu"
 
