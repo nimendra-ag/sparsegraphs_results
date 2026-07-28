@@ -4,9 +4,8 @@ from sklearn.metrics import (
     multilabel_confusion_matrix,
     roc_auc_score,
     accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
+    matthews_corrcoef,
+    precision_recall_fscore_support,
     average_precision_score,
     classification_report,
     precision_recall_curve,
@@ -22,6 +21,10 @@ from datetime import datetime
 
 
 class Evaluator:
+    # Column widths for the per-model metric table.
+    _LABEL_W = 22
+    _COL_W = 15
+
     def __init__(
         self,
         X_train,
@@ -78,6 +81,116 @@ class Evaluator:
         minority_label = labels[np.argmin(counts)]
         return majority_label, minority_label
 
+    @staticmethod
+    def _scores_for(y_scores, label):
+        """Score vector treating `label` as the positive class.
+
+        `y_scores` is P(y = +1) from predict_proba, so the complementary class
+        is scored by 1 - y_scores. Needed because average precision is
+        asymmetric — it ignores true negatives, so each class needs its own
+        ranking to be scored fairly.
+        """
+        return y_scores if label == 1 else 1.0 - y_scores
+
+    def _chance_baselines(self, minority_label, majority_label):
+        """Scores a knowledge-free model attains on this split.
+
+        Threshold metrics use the best trivial constant classifier; ranking
+        metrics (ROC-AUC, average precision) use a random ranker. These matter
+        because the metrics have wildly different floors under imbalance: at a
+        5% positive rate a constant classifier already scores ~0.95 accuracy
+        and ~0.49 macro-F1, but exactly 0.0 MCC.
+        """
+        n_total = len(self.y_test)
+        n_minority = int(np.sum(self.y_test == minority_label))
+        n_majority = int(np.sum(self.y_test == majority_label))
+        pi_minority = n_minority / n_total
+        pi_majority = n_majority / n_total
+
+        # A random ranker's precision at any cut equals the class base rate, so
+        # its PR curve is flat at that height and average precision shares the
+        # same floor. The best trivial F1 for a class comes from predicting it
+        # everywhere: precision = prevalence, recall = 1.
+        f1_minority = 2 * pi_minority / (1 + pi_minority)
+        f1_majority = 2 * pi_majority / (1 + pi_majority)
+
+        return {
+            "support": {
+                "minority": n_minority,
+                "majority": n_majority,
+                "total": n_total,
+            },
+            # Per-class floors, listed under each model's table.
+            "precision": (pi_minority, pi_majority),
+            "f1": (f1_minority, f1_majority),
+            "pr_auc": (pi_minority, pi_majority),
+            # Macro-level floors — what the report's Baseline column shows.
+            "macro": {
+                "precision": (pi_minority + pi_majority) / 2,
+                # Any constant or random classifier trades TPR against TNR one
+                # for one, so macro-recall is pinned at exactly 0.5.
+                "recall": 0.5,
+                # All-negative scores f1_majority on one class and 0 on the
+                # other; all-positive is the mirror image. Take the better one.
+                "f1": max(f1_majority, f1_minority) / 2,
+                "accuracy": max(pi_minority, pi_majority),
+                "pr_auc": (pi_minority + pi_majority) / 2,
+            },
+            "roc_auc": 0.5,
+            "mcc": 0.0,
+        }
+
+    @classmethod
+    def _cell(cls, value):
+        """Render one table cell: 4dp for floats, bare digits for counts."""
+        if value is None:
+            return f"{'-':>{cls._COL_W}s}"
+        if isinstance(value, (int, np.integer)):
+            return f"{int(value):>{cls._COL_W}d}"
+        return f"{float(value):>{cls._COL_W}.4f}"
+
+    def _format_metrics_block(self, record):
+        """Render one model's metrics. Used for both the console output and the
+        saved report so the two can never drift apart."""
+        w = self._LABEL_W
+        minority_label = int(record["minority_label"])
+        majority_label = int(record["majority_label"])
+        minority_header = f"Minority({minority_label:+d})"
+        majority_header = f"Majority({majority_label:+d})"
+
+        lines = [
+            f"===== {record['model_name']} (threshold={record['threshold']:.4f}) =====",
+            "",
+            f"{'':{w}s}"
+            + f"{minority_header:>{self._COL_W}s}"
+            + f"{majority_header:>{self._COL_W}s}"
+            + f"{'Macro':>{self._COL_W}s}"
+            + f"{'Baseline':>{self._COL_W}s}",
+        ]
+        for label, values in record["split"].items():
+            lines.append(f"{label:{w}s}" + "".join(self._cell(v) for v in values))
+        lines.append(
+            f"{'Support':{w}s}"
+            + "".join(self._cell(v) for v in record["support"])
+            + self._cell(None)
+        )
+
+        lines += [
+            "",
+            "Symmetric (whole test set)",
+            f"{'ROC-AUC':{w}s}{self._cell(record['roc_auc'])}"
+            f"   (baseline {record['baselines']['roc_auc']:.4f})",
+            f"{'MCC':{w}s}{self._cell(record['mcc'])}"
+            f"   (baseline {record['baselines']['mcc']:.4f})",
+            "",
+            "Chance baseline by class",
+            f"{'':{w}s}{minority_header:>{self._COL_W}s}{majority_header:>{self._COL_W}s}",
+        ]
+        for label, pair in record["per_class_baseline"].items():
+            lines.append(f"{label:{w}s}" + "".join(self._cell(v) for v in pair))
+
+        return "\n".join(lines)
+
     def _plot_confusion_matrix(self, cm, title, tick_labels, filepath):
         """Render a single confusion matrix as its own matplotlib figure."""
         fig, ax = plt.subplots(figsize=(6, 5))
@@ -104,8 +217,15 @@ class Evaluator:
         fig.savefig(filepath, dpi=300, bbox_inches="tight")
         plt.close(fig)
 
-    def _evaluate_model(self, model, model_name, optimize_threshold=True):
-        model.fit(self.X_train, self.y_train)
+    def _evaluate_model(self, model, model_name, optimize_threshold=True,
+                        sample_weight=None):
+        # Single fit. `sample_weight` is threaded through rather than applied by
+        # the caller, because a caller-side fit would be silently overwritten
+        # here — dropping the weights it was trying to apply.
+        if sample_weight is not None:
+            model.fit(self.X_train, self.y_train, sample_weight=sample_weight)
+        else:
+            model.fit(self.X_train, self.y_train)
         # Retain the fitted estimator for export (the deployed model is exactly
         # the one benchmarked here).
         self.fitted_models[model_name] = model
@@ -123,35 +243,56 @@ class Evaluator:
             threshold = 0.5
             y_pred = model.predict(self.X_test)
 
-        # Metrics
-        accuracy = accuracy_score(self.y_test, y_pred)
-        precision = precision_score(self.y_test, y_pred, zero_division=0)
-        rec = recall_score(self.y_test, y_pred, zero_division=0)
-        f1 = f1_score(self.y_test, y_pred, zero_division=0)
-        roc_auc = roc_auc_score(self.y_test, y_scores)
-        pr_auc = average_precision_score(self.y_test, y_scores)
-        report_text = classification_report(self.y_test, y_pred, zero_division=0)
-
-        print(f"\n===== {model_name} (threshold={threshold:.3f}) =====")
-        print(f"Accuracy  : {accuracy:.4f}")
-        print(f"Precision : {precision:.4f}")
-        print(f"Recall    : {rec:.4f}")
-        print(f"F1-Score  : {f1:.4f}")
-        print(f"ROC-AUC   : {roc_auc:.4f}")
-        print(f"PR-AUC    : {pr_auc:.4f}")
-        print("\nClassification Report")
-        print(report_text)
-
         majority_label, minority_label = self._majority_minority_labels()
+        baselines = self._chance_baselines(minority_label, majority_label)
+
         cm_global = confusion_matrix(self.y_test, y_pred)
         cm_per_class = multilabel_confusion_matrix(
             self.y_test, y_pred, labels=[majority_label, minority_label]
         )
         cm_majority, cm_minority = cm_per_class[0], cm_per_class[1]
 
+        # Per-class precision / recall / F1, ordered [minority, majority].
+        prec_pc, rec_pc, f1_pc, sup_pc = precision_recall_fscore_support(
+            self.y_test, y_pred,
+            labels=[minority_label, majority_label],
+            average=None, zero_division=0,
+        )
+
+        # One-vs-rest accuracy per class. In a binary problem both classes give
+        # the same value, and it equals global accuracy — computed per class
+        # rather than asserted so the table shows that rather than claiming it.
+        acc_minority = (cm_minority[0, 0] + cm_minority[1, 1]) / cm_minority.sum()
+        acc_majority = (cm_majority[0, 0] + cm_majority[1, 1]) / cm_majority.sum()
+
+        # Average precision ignores true negatives, so each class is scored
+        # against its own ranking rather than sharing one score vector.
+        ap_minority = average_precision_score(
+            self.y_test, self._scores_for(y_scores, minority_label),
+            pos_label=minority_label,
+        )
+        ap_majority = average_precision_score(
+            self.y_test, self._scores_for(y_scores, majority_label),
+            pos_label=majority_label,
+        )
+
+        # Threshold-free / symmetric over the whole split. MCC is the one
+        # scalar here with a true zero baseline under any class ratio.
+        roc_auc = roc_auc_score(self.y_test, y_scores)
+        mcc = matthews_corrcoef(self.y_test, y_pred)
+
+        # Scalars kept for the MC-CV aggregator's key names. Precision / recall
+        # / F1 are the minority-class figures, which is what they already were
+        # on data where the minority class is +1.
+        accuracy = accuracy_score(self.y_test, y_pred)
+        precision, rec, f1 = float(prec_pc[0]), float(rec_pc[0]), float(f1_pc[0])
+        pr_auc = float(ap_minority)
+        report_text = classification_report(self.y_test, y_pred, zero_division=0)
+
+        macro = baselines["macro"]
         # Deferred to save_report(), once the run folder (named with the
         # completion timestamp) exists.
-        self._model_records.append({
+        record = {
             "model_name": model_name,
             "threshold": threshold,
             "accuracy": accuracy,
@@ -160,26 +301,65 @@ class Evaluator:
             "f1": f1,
             "roc_auc": roc_auc,
             "pr_auc": pr_auc,
+            "mcc": mcc,
             "report_text": report_text,
+            # (minority, majority, macro, macro-level chance baseline)
+            "split": {
+                "Precision": (prec_pc[0], prec_pc[1], prec_pc.mean(), macro["precision"]),
+                "Recall": (rec_pc[0], rec_pc[1], rec_pc.mean(), macro["recall"]),
+                "F1": (f1_pc[0], f1_pc[1], f1_pc.mean(), macro["f1"]),
+                "Accuracy": (acc_minority, acc_majority,
+                             (acc_minority + acc_majority) / 2, macro["accuracy"]),
+                "PR-AUC (AP)": (ap_minority, ap_majority,
+                                (ap_minority + ap_majority) / 2, macro["pr_auc"]),
+            },
+            "support": (int(sup_pc[0]), int(sup_pc[1]), baselines["support"]["total"]),
+            # Recall and Accuracy are omitted: predicting one class everywhere
+            # forces that class's recall to 1.0, so per-class recall has no
+            # meaningful floor, and accuracy's floor is not class-specific.
+            "per_class_baseline": {
+                "Precision": baselines["precision"],
+                "F1": baselines["f1"],
+                "PR-AUC (AP)": baselines["pr_auc"],
+            },
+            "baselines": baselines,
             "cm_global": cm_global,
             "cm_majority": cm_majority,
             "cm_minority": cm_minority,
             "majority_label": majority_label,
             "minority_label": minority_label,
-        })
+        }
+        self._model_records.append(record)
 
+        print()
+        print(self._format_metrics_block(record))
+        print()
+
+        # Every scalar is prefixed with the averaging it uses, so a column name
+        # in an aggregated CSV can never be mistaken for a different average.
         return {
+            # Macro-averaged: both classes count equally regardless of size.
+            "Macro-Precision": float(prec_pc.mean()),
+            "Macro-Recall": float(rec_pc.mean()),
+            "Macro-F1": float(f1_pc.mean()),
+            "Macro-PR-AUC": float((ap_minority + ap_majority) / 2),
+            # Symmetric over the whole split — these have no per-class variant
+            # in a binary problem, so they are reported once.
             "Accuracy": accuracy,
-            "Precision": precision,
-            "Recall": rec,
-            "F1-Score": f1,
             "ROC-AUC": roc_auc,
-            "PR-AUC": pr_auc,
+            "MCC": mcc,
+            # Minority class alone — the headline figures under imbalance.
+            "Minority-Precision": precision,
+            "Minority-Recall": rec,
+            "Minority-F1": f1,
+            "Minority-PR-AUC": pr_auc,
             "Threshold": threshold,
             "Classification Report": report_text,
             "Confusion Matrix": cm_global,
             "Confusion Matrix (Majority Class)": cm_majority,
             "Confusion Matrix (Minority Class)": cm_minority,
+            "Per-Class Metrics": record["split"],
+            "Chance Baselines": baselines,
         }
 
     def get_fitted_models(self):
@@ -226,6 +406,24 @@ class Evaluator:
             f"Started At      : {self.started_at}\n"
             f"Completed At    : {completed_at}\n"
             + "=" * 60 + "\n\n"
+            + "Reading the tables\n"
+            "  Minority / Majority  the metric computed with that class as the\n"
+            "                       positive class.\n"
+            "  Macro                unweighted mean of the two class columns, so\n"
+            "                       both classes count equally regardless of size.\n"
+            "  Baseline             what a knowledge-free model scores in the Macro\n"
+            "                       column: the best trivial constant classifier for\n"
+            "                       Precision / Recall / F1 / Accuracy, and a random\n"
+            "                       ranker for PR-AUC, ROC-AUC and MCC. Metrics whose\n"
+            "                       floor differs by class are listed again per class\n"
+            "                       under each model.\n"
+            "  Accuracy             identical across all three columns by construction\n"
+            "                       in a binary problem (one-vs-rest accuracy is the\n"
+            "                       same for both classes); split for a uniform layout.\n"
+            "  Recall               has no per-class floor — predicting a class\n"
+            "                       everywhere forces its recall to 1.0 — so only the\n"
+            "                       macro floor of 0.5 is meaningful.\n"
+            + "=" * 60 + "\n\n"
         )
         report_blocks = []
 
@@ -258,15 +456,8 @@ class Evaluator:
             )
 
             report_blocks.append(
-                f"===== {record['model_name']} (threshold={record['threshold']:.3f}) =====\n"
-                f"Accuracy  : {record['accuracy']:.4f}\n"
-                f"Precision : {record['precision']:.4f}\n"
-                f"Recall    : {record['recall']:.4f}\n"
-                f"F1-Score  : {record['f1']:.4f}\n"
-                f"ROC-AUC   : {record['roc_auc']:.4f}\n"
-                f"PR-AUC    : {record['pr_auc']:.4f}\n"
-                f"\nClassification Report\n{record['report_text']}\n"
-                f"Confusion Matrix (whole dataset)\n{record['cm_global']}\n"
+                self._format_metrics_block(record) + "\n"
+                f"\nConfusion Matrix (whole dataset)\n{record['cm_global']}\n"
                 f"\nConfusion Matrix (majority class = {majority_label} vs rest)\n{record['cm_majority']}\n"
                 f"\nConfusion Matrix (minority class = {minority_label} vs rest)\n{record['cm_minority']}\n"
             )
@@ -291,9 +482,13 @@ class Evaluator:
         weight_map = dict(zip(classes, len(self.y_train) / (len(classes) * counts)))
         sample_weights = np.array([weight_map[y] for y in self.y_train])
 
+        # The weights are handed to _evaluate_model rather than applied here:
+        # it fits the estimator itself, so a fit at this point would be thrown
+        # away and the model would end up trained unweighted.
         model = GradientBoostingClassifier(random_state=self.random_state)
-        model.fit(self.X_train, self.y_train, sample_weight=sample_weights)
-        return self._evaluate_model(model, "Gradient Boosting")
+        return self._evaluate_model(
+            model, "Gradient Boosting", sample_weight=sample_weights
+        )
 
     def predict_svm(self):
         print("Predicting with SVM")

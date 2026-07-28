@@ -1,5 +1,4 @@
 import numpy as np
-from sklearn.metrics import balanced_accuracy_score, f1_score, recall_score
 
 
 class SRCClassifier:
@@ -158,27 +157,58 @@ class SRCClassifier:
 
     def evaluate(self, test_embeddings, y_true, minority_label=1):
         """
-        Returns Precision, Recall, F1-Score, ROC-AUC, PR-AUC
-        for the minority (positive) class.
+        Returns the same scalar metric set (and the same key names) as
+        `utils.evaluator.Evaluator._evaluate_model`, so SRC rows and sklearn
+        rows in an aggregated MC-CV table are directly comparable:
+
+          Macro-*      both classes weighted equally
+          Accuracy / ROC-AUC / MCC   symmetric over the whole test set
+          Minority-*   the minority (positive) class alone
+
+        Note `Macro-Recall` is numerically identical to balanced accuracy,
+        which this method used to report under the key `balanced_acc`.
+
+        Values are returned unrounded; the MC-CV aggregator formats them.
         """
         from sklearn.metrics import (
-            precision_score, recall_score, f1_score,
+            accuracy_score, matthews_corrcoef, precision_recall_fscore_support,
             roc_auc_score, average_precision_score,
-            balanced_accuracy_score
         )
 
         y_pred, all_scores = self.predict(test_embeddings)
         probas = self._scores_to_proba(all_scores)
 
-        # Find which column index corresponds to the minority label
-        minority_idx = np.where(self.dl.classes_ == minority_label)[0][0]
+        classes = np.asarray(self.dl.classes_)
+        minority_idx = int(np.where(classes == minority_label)[0][0])
+        majority_label = classes[classes != minority_label][0]
+        majority_idx = int(np.where(classes == majority_label)[0][0])
         minority_proba = probas[:, minority_idx]
+        majority_proba = probas[:, majority_idx]
+
+        # Per-class precision / recall / F1, ordered [minority, majority].
+        prec, rec, f1, _ = precision_recall_fscore_support(
+            y_true, y_pred,
+            labels=[minority_label, majority_label],
+            average=None, zero_division=0,
+        )
+
+        # Average precision ignores true negatives, so each class is ranked by
+        # its own probability column rather than sharing one score vector.
+        ap_minority = average_precision_score(
+            y_true, minority_proba, pos_label=minority_label)
+        ap_majority = average_precision_score(
+            y_true, majority_proba, pos_label=majority_label)
 
         return {
-            "balanced_acc":  round(balanced_accuracy_score(y_true, y_pred), 4),
-            "precision":     round(precision_score(y_true, y_pred, pos_label=minority_label), 4),
-            "recall":        round(recall_score(y_true, y_pred, pos_label=minority_label), 4),
-            "f1_score":      round(f1_score(y_true, y_pred, pos_label=minority_label), 4),
-            "roc_auc":       round(roc_auc_score(y_true, minority_proba), 4),
-            "pr_auc":        round(average_precision_score(y_true, minority_proba), 4),
+            "Macro-Precision": float(prec.mean()),
+            "Macro-Recall": float(rec.mean()),
+            "Macro-F1": float(f1.mean()),
+            "Macro-PR-AUC": float((ap_minority + ap_majority) / 2),
+            "Accuracy": float(accuracy_score(y_true, y_pred)),
+            "ROC-AUC": float(roc_auc_score(y_true, minority_proba)),
+            "MCC": float(matthews_corrcoef(y_true, y_pred)),
+            "Minority-Precision": float(prec[0]),
+            "Minority-Recall": float(rec[0]),
+            "Minority-F1": float(f1[0]),
+            "Minority-PR-AUC": float(ap_minority),
         }

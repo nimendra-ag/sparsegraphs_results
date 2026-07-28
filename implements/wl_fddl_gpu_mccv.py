@@ -39,6 +39,34 @@ MASTER_SEEDS = np.random.choice(101, size=5, replace=False).tolist()
 DATASET = "nci_full"
 IMPLEMENTATION = "wl_fddl_gpu"
 
+# Scalars persisted per seed, for every classifier. One shared list: the
+# sklearn Evaluator and SRCClassifier return these same key names, so all six
+# methods land in the CSV under identical, self-describing column names.
+#
+# Under heavy imbalance the averaging matters more than the metric: a majority
+# classifier already scores ~0.95 accuracy but 0.0 MCC on this data, and macro
+# and minority F1 tell very different stories about the same predictions. Each
+# name therefore states its own averaging so a column can never be misread.
+METRIC_KEYS = [
+    # Macro-averaged — both classes count equally regardless of size.
+    "Macro-Precision",
+    "Macro-Recall",
+    "Macro-F1",
+    "Macro-PR-AUC",
+    # Symmetric over the whole test split (no per-class variant exists in a
+    # binary problem). MCC is the one scalar here with a 0.0 chance baseline
+    # at any class ratio.
+    "Accuracy",
+    "ROC-AUC",
+    "MCC",
+    # Minority class alone — the headline figures under imbalance, kept
+    # because an MC-CV run is expensive and these are free to record.
+    "Minority-Precision",
+    "Minority-Recall",
+    "Minority-F1",
+    "Minority-PR-AUC",
+]
+
 PER_RUN_FILE = "per_run_metrics.csv"
 SUMMARY_FILE = "summary_mean_std.csv"
 TIMINGS_FILE = "per_run_timings.csv"
@@ -72,9 +100,20 @@ def _get_data():
     return _DATA
 
 
-def _flatten(prefix, metrics, keys):
-    """Pull a subset of scalar metrics out of a result dict under a prefix."""
-    return {f"{prefix}/{k}": float(metrics[k]) for k in keys if k in metrics}
+def _flatten(prefix, metrics, keys=METRIC_KEYS):
+    """Pull the scalar metrics out of a result dict under a prefix.
+
+    Raises on a missing key rather than skipping it: silently dropping a column
+    is how a metric ends up absent from a multi-hour run's CSV without anyone
+    noticing until the run is over.
+    """
+    missing = [k for k in keys if k not in metrics]
+    if missing:
+        raise KeyError(
+            f"{prefix}: result dict is missing {missing}. "
+            f"Available: {sorted(k for k, v in metrics.items() if np.isscalar(v))}"
+        )
+    return {f"{prefix}/{k}": float(metrics[k]) for k in keys}
 
 
 def run_once(master_seed):
@@ -164,22 +203,19 @@ def run_once(master_seed):
         fixed_thresholds=val_thresholds,  # reuse validation-tuned thresholds
     )
 
-    sk_keys = ["Accuracy", "Precision", "Recall", "F1-Score", "ROC-AUC", "PR-AUC"]
-    src_keys = ["balanced_acc", "precision", "recall", "f1_score", "roc_auc", "pr_auc"]
-
     row = {}
     with _phase(timings, "test_logreg"):
         lr_res = evaluator_test.predict_logistic_regression()
-    row.update(_flatten("LogisticRegression", lr_res, sk_keys))
+    row.update(_flatten("LogisticRegression", lr_res))
     with _phase(timings, "test_gboost"):
         gb_res = evaluator_test.predict_gradient_boosting()
-    row.update(_flatten("GradientBoosting", gb_res, sk_keys))
+    row.update(_flatten("GradientBoosting", gb_res))
     with _phase(timings, "test_svm"):
         svm_res = evaluator_test.predict_svm()
-    row.update(_flatten("LinearSVM", svm_res, sk_keys))
+    row.update(_flatten("LinearSVM", svm_res))
     with _phase(timings, "test_rf"):
         rf_res = evaluator_test.predict_random_forest()
-    row.update(_flatten("RandomForest", rf_res, sk_keys))
+    row.update(_flatten("RandomForest", rf_res))
 
     # SRC-native classifiers (deterministic given the trained dictionary).
     # SRC scores against the encoder-space embeddings (not the sparse codes).
@@ -187,10 +223,10 @@ def run_once(master_seed):
         graph_embeddings_ml_test = wl.generate_inferencing_embeddings(G_test)
     with _phase(timings, "src_pure"):
         src_pure = SRCClassifier(fddl_gpu, gamma=0.0)
-        row.update(_flatten("SRC_pure", src_pure.evaluate(graph_embeddings_ml_test, y_test), src_keys))
+        row.update(_flatten("SRC_pure", src_pure.evaluate(graph_embeddings_ml_test, y_test)))
     with _phase(timings, "src_fddl"):
         src_fddl = SRCClassifier(fddl_gpu, gamma=0.5)
-        row.update(_flatten("SRC_fddl", src_fddl.evaluate(graph_embeddings_ml_test, y_test), src_keys))
+        row.update(_flatten("SRC_fddl", src_fddl.evaluate(graph_embeddings_ml_test, y_test)))
 
     timings["seed_total"] = time.perf_counter() - seed_t0
 
