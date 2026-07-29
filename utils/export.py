@@ -31,7 +31,7 @@ from utils.seeding import seed_everything
 from utils import pipeline
 from utils.artifact_store import save_bundle
 
-# Split proportions — identical to wl_fddl_gpu_mccv.py.
+# Split proportions — identical to the MC-CV benchmark (utils/mccv.py).
 TEST_SIZE = 0.15                 # 15% of full -> held-out test
 VAL_SIZE_OF_REMAINDER = 0.15 / 0.85   # -> 15% of full -> validation
 VOCAB_ML_RATIO = 2 / 7           # vocab_train:ML_train = 5:2 -> 50% / 20% of full
