@@ -1,0 +1,34 @@
+
+            {'Accuracy': 0.884407146724418, 'Precision': 0.18193548387096775, 'Recall': 0.39058171745152354, 'F1-Score': 0.2482394366197183, 'ROC-AUC': 0.7560614046256879, 'PR-AUC': 0.1611157527992419, 'Threshold': np.float64(0.7010459962141479), 'Classification Report': '              precision    recall  f1-score   support\n\n          -1       0.97      0.91      0.94      7027\n           1       0.18      0.39      0.25       361\n\n    accuracy                           0.88      7388\n   macro avg       0.57      0.65      0.59      7388\nweighted avg       0.93      0.88      0.90      7388\n', 'Confusion Matrix': array([[6393,  634],
+       [ 220,  141]]), 'Confusion Matrix (Majority Class)': array([[ 141,  220],
+       [ 634, 6393]]), 'Confusion Matrix (Minority Class)': array([[6393,  634],
+       [ 220,  141]])}
+            {'Accuracy': 0.9327287493232268, 'Precision': 0.31215469613259667, 'Recall': 0.31301939058171746, 'F1-Score': 0.31258644536652835, 'ROC-AUC': 0.7590007990548525, 'PR-AUC': 0.2537244611898113, 'Threshold': np.float64(0.13817374895662093), 'Classification Report': '              precision    recall  f1-score   support\n\n          -1       0.96      0.96      0.96      7027\n           1       0.31      0.31      0.31       361\n\n    accuracy                           0.93      7388\n   macro avg       0.64      0.64      0.64      7388\nweighted avg       0.93      0.93      0.93      7388\n', 'Confusion Matrix': array([[6778,  249],
+       [ 248,  113]]), 'Confusion Matrix (Majority Class)': array([[ 113,  248],
+       [ 249, 6778]]), 'Confusion Matrix (Minority Class)': array([[6778,  249],
+       [ 248,  113]])}
+            {'Accuracy': 0.8903627504060639, 'Precision': 0.18776077885952713, 'Recall': 0.3739612188365651, 'F1-Score': 0.25, 'ROC-AUC': 0.7558650902119919, 'PR-AUC': 0.16538646843106286, 'Threshold': np.float64(0.11047757658903763), 'Classification Report': '              precision    recall  f1-score   support\n\n          -1       0.97      0.92      0.94      7027\n           1       0.19      0.37      0.25       361\n\n    accuracy                           0.89      7388\n   macro avg       0.58      0.65      0.60      7388\nweighted avg       0.93      0.89      0.91      7388\n', 'Confusion Matrix': array([[6443,  584],
+       [ 226,  135]]), 'Confusion Matrix (Majority Class)': array([[ 135,  226],
+       [ 584, 6443]]), 'Confusion Matrix (Minority Class)': array([[6443,  584],
+       [ 226,  135]])}
+            {'Accuracy': 0.944369247428262, 'Precision': 0.4297752808988764, 'Recall': 0.42382271468144045, 'F1-Score': 0.42677824267782427, 'ROC-AUC': 0.816740889020466, 'PR-AUC': 0.3721448501108335, 'Threshold': np.float64(0.32), 'Classification Report': '              precision    recall  f1-score   support\n\n          -1       0.97      0.97      0.97      7027\n           1       0.43      0.42      0.43       361\n\n    accuracy                           0.94      7388\n   macro avg       0.70      0.70      0.70      7388\nweighted avg       0.94      0.94      0.94      7388\n', 'Confusion Matrix': array([[6824,  203],
+       [ 208,  153]]), 'Confusion Matrix (Majority Class)': array([[ 153,  208],
+       [ 203, 6824]]), 'Confusion Matrix (Minority Class)': array([[6824,  203],
+       [ 208,  153]])}
+
+            --- LC-KSVD Internal Classifier ---
+                    Precision : 0.0489
+                    Recall    : 1.0000
+                    F1-Score  : 0.0932
+                    ROC-AUC   : 0.5835
+                    PR-AUC    : 0.0636
+                          precision    recall  f1-score   support
+
+          -1       0.00      0.00      0.00      7027
+           1       0.05      1.00      0.09       361
+
+    accuracy                           0.05      7388
+   macro avg       0.02      0.50      0.05      7388
+weighted avg       0.00      0.05      0.00      7388
+
+            

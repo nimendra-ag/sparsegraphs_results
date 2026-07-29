@@ -61,7 +61,7 @@ class LCKSVDLearner(DictLearner):
 
     def __init__(
         self,
-        K: int = 256,
+        K: int = 1024,
         sparsity: int = 10,
         n_iter: int = 10,
         alpha: float = 32.0,
