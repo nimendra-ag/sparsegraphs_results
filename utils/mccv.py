@@ -255,14 +255,39 @@ def run_once(master_seed, encoder_factory, dict_learner_factory,
 
     # SRC-native classifiers (deterministic given the trained dictionary).
     # SRC scores against the encoder-space embeddings (not the sparse codes).
-    with _phase(timings, "src_embeddings"):
-        graph_embeddings_ml_test = encoder.generate_inferencing_embeddings(G_test)
-    with _phase(timings, "src_pure"):
-        src_pure = SRCClassifier(dict_learner, gamma=0.0)
-        row.update(_flatten("SRC_pure", src_pure.evaluate(graph_embeddings_ml_test, y_test)))
-    with _phase(timings, "src_fddl"):
-        src_fddl = SRCClassifier(dict_learner, gamma=0.5)
-        row.update(_flatten("SRC_fddl", src_fddl.evaluate(graph_embeddings_ml_test, y_test)))
+    #
+    # SRC classifies by "which class's block of atoms reconstructs this sample
+    # best", so it is only defined for a class-partitioned dictionary: D laid out
+    # as (features, k * n_classes) with block i belonging to classes_[i], as FDDL
+    # builds it. An unsupervised learner (AKSVD) never sees y_train, so its atoms
+    # carry no class identity — slicing them into blocks by index would invent a
+    # labelling the learner never learned and yield meaningless residuals. Those
+    # arms are therefore recorded as NaN rather than fabricated. Supervised
+    # learners are unaffected: they satisfy the check and take the same path as
+    # before.
+    src_capable = all(
+        getattr(dict_learner, attr, None) is not None
+        for attr in ("D", "k", "classes_")
+    )
+    if src_capable:
+        with _phase(timings, "src_embeddings"):
+            graph_embeddings_ml_test = encoder.generate_inferencing_embeddings(G_test)
+        with _phase(timings, "src_pure"):
+            src_pure = SRCClassifier(dict_learner, gamma=0.0)
+            row.update(_flatten("SRC_pure", src_pure.evaluate(graph_embeddings_ml_test, y_test)))
+        with _phase(timings, "src_fddl"):
+            src_fddl = SRCClassifier(dict_learner, gamma=0.5)
+            row.update(_flatten("SRC_fddl", src_fddl.evaluate(graph_embeddings_ml_test, y_test)))
+    else:
+        print(f"  [skip] {type(dict_learner).__name__} has no class-partitioned "
+              f"dictionary (SRC needs .D/.k/.classes_) — recording SRC arms as NaN.",
+              flush=True)
+        # NaN rather than dropped columns: the CSV keeps one schema across every
+        # implementation, so an AKSVD run and an FDDL run still line up column
+        # for column in the aggregated table.
+        nan_metrics = {k: float("nan") for k in METRIC_KEYS}
+        row.update(_flatten("SRC_pure", nan_metrics))
+        row.update(_flatten("SRC_fddl", nan_metrics))
 
     timings["seed_total"] = time.perf_counter() - seed_t0
 
