@@ -33,7 +33,7 @@ EXPORT_SEED = 42
 
 if __name__ == "__main__":
     data_loader = GraphDataLoader()
-    graphs, y = data_loader.nci_full_graphs, data_loader.nci_full_labels
+    graphs, y = data_loader.load(DATASET)
 
     encoder = WL(seed=EXPORT_SEED)
     dict_learner = AKSVD(seed=EXPORT_SEED)
