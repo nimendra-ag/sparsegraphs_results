@@ -2,15 +2,14 @@ import os, sys, json
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import numpy as np
-import torch
 
 from dict_learners.dict_learner import DictLearner
-from ksvd import ApproximateKSVD
+from dict_learners.ksvd import ApproximateKSVD
 
 class AKSVD(DictLearner):
     def __init__(
             self,
-            dimensions: int = 350,
+            dimensions: int = 128,
             max_iter: int = 10,
             tol: float = 1e-6,
             n_non_zero_coefs: int = 10,
@@ -31,8 +30,7 @@ class AKSVD(DictLearner):
         # dict-learner call site is uniform across supervised/unsupervised types.
         # Seed injected per run (Monte Carlo CV) — only the random-init fallback in
         # ApproximateKSVD._initialize is stochastic, but we seed for reproducibility.
-        torch.manual_seed(self.seed)
-        torch.cuda.manual_seed(self.seed)
+        np.random.seed(self.seed)
         self._dictionary = self.aksvd.fit(training_graph_embeddings).components_
 
         # self._embedding = self.aksvd.transform(training_graph_embeddings)
@@ -69,10 +67,10 @@ class AKSVD(DictLearner):
         os.makedirs(dirpath, exist_ok=True)
         with open(os.path.join(dirpath, self._CONFIG_FILE), "w", encoding="utf-8") as f:
             json.dump(self._config(), f, indent=2)
-        # _dictionary is a GPU tensor (ApproximateKSVD runs on CUDA); move it to
-        # host memory before converting to a NumPy array for np.save.
+        # ApproximateKSVD is pure NumPy, so components_ is already an ndarray.
+        # Kept duck-typed so a tensor-backed backend would still serialize.
         dictionary = self._dictionary
-        if isinstance(dictionary, torch.Tensor):
+        if hasattr(dictionary, "detach"):
             dictionary = dictionary.detach().cpu().numpy()
         np.save(os.path.join(dirpath, self._DICT_FILE), np.asarray(dictionary))
 
@@ -88,9 +86,6 @@ class AKSVD(DictLearner):
             seed=config.get("seed", 42),
         )
         components = np.load(os.path.join(dirpath, cls._DICT_FILE))
-        # Move the dictionary back onto the estimator's device so transform()
-        # (which builds a Gram matrix against GPU tensors) doesn't mix backends.
-        components = torch.from_numpy(components).float().to(learner.aksvd.device)
         learner._dictionary = components
         # Restore the inner estimator's dictionary so transform() works.
         learner.aksvd.components_ = components
