@@ -1,3 +1,5 @@
+import os
+import json
 from collections import Counter
 import numpy as np
 import networkx as nx
@@ -10,12 +12,17 @@ class FSM(GraphEncoder):
             self,
             radius: int = 1,
             n_vocab: int = 1000,
-            min_count: int = 5
+            min_count: int = 5,
+            seed: int = 42
     ):
         super().__init__(name="FSM")
         self.radius = radius
         self.n_vocab = n_vocab
         self.min_count = min_count
+        # FSM's encoding is deterministic; the seed exists only so this encoder
+        # matches the WL/EdgeWL constructor surface (mccv/export hand every
+        # encoder a seed) and so it can be recorded in the saved config.
+        self.seed = seed
         self.vocab = None
         self.embeddings = None
 
@@ -151,3 +158,56 @@ class FSM(GraphEncoder):
 
         documents = self.extract_subgraphs(graphs)
         return self.calc_coefficients(documents)
+
+    # --- Persistence ---------------------------------------------------------
+    # Mirrors WL/EdgeWL: the only *learned* state is `vocab` — the ordered
+    # shape signatures that survived both the hybrid frequency/discriminative
+    # budget and the collinearity drop. That order IS the embedding column
+    # order, so it must be preserved exactly on disk. Signatures are plain
+    # ASCII strings (no process-salted hashing), so a saved bundle reloads
+    # correctly in any interpreter.
+    _CONFIG_FILE = "fsm_config.json"
+    _VOCAB_FILE = "fsm_vocab.json"
+
+    def _config(self):
+        return {
+            "class": type(self).__name__,
+            "name": self.name,
+            "radius": self.radius,
+            "n_vocab": self.n_vocab,
+            "min_count": self.min_count,
+            "seed": self.seed,
+        }
+
+    def save(self, dirpath: str) -> None:
+        if self.vocab is None:
+            raise ValueError("FSM has no vocab to save; fit the encoder first.")
+        os.makedirs(dirpath, exist_ok=True)
+
+        with open(os.path.join(dirpath, self._CONFIG_FILE), "w", encoding="utf-8") as f:
+            json.dump(self._config(), f, indent=2)
+
+        # Preserve order; signatures are strings, the stored value is a
+        # frequency count -> JSON safe.
+        vocab_serialisable = [[str(sig), float(count)] for sig, count in self.vocab]
+        with open(os.path.join(dirpath, self._VOCAB_FILE), "w", encoding="utf-8") as f:
+            json.dump(vocab_serialisable, f)
+
+    @classmethod
+    def load(cls, dirpath: str) -> "FSM":
+        with open(os.path.join(dirpath, cls._CONFIG_FILE), encoding="utf-8") as f:
+            config = json.load(f)
+        with open(os.path.join(dirpath, cls._VOCAB_FILE), encoding="utf-8") as f:
+            vocab = [(sig, count) for sig, count in json.load(f)]
+
+        encoder = cls(
+            radius=config["radius"],
+            n_vocab=config["n_vocab"],
+            min_count=config["min_count"],
+            seed=config.get("seed", 42),
+        )
+        encoder.vocab = vocab
+        # The saved vocab length is authoritative for the embedding width: the
+        # collinearity filter shrinks the vocab after create_vocab set n_vocab.
+        encoder.n_vocab = len(vocab)
+        return encoder
