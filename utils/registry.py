@@ -46,6 +46,10 @@ def _dict_learner_loaders():
         from dict_learners.aksvd import AKSVD
         return AKSVD
 
+    def _lcksvd():
+        from dict_learners.lcksvd import LCKSVDLearner
+        return LCKSVDLearner
+
     def _pca_then_dict_learner():
         # Comparison arm only (pca/): a PCA reduction composed with a real
         # dictionary learner, presented to the pipeline as one DictLearner.
@@ -55,6 +59,7 @@ def _dict_learner_loaders():
     return {
         "FDDLGPU": _fddl_gpu,
         "AKSVD": _aksvd,
+        "LCKSVDLearner": _lcksvd,
         "PCAThenDictLearner": _pca_then_dict_learner,
     }
 

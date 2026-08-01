@@ -299,6 +299,7 @@ def init_dictionary_svd(
     Y: np.ndarray,
     labels: np.ndarray,
     atom_labels: np.ndarray,
+    seed: int = 42,
 ) -> np.ndarray:
     """
     Initialise D^(0) using per-class truncated SVD.
@@ -320,6 +321,8 @@ def init_dictionary_svd(
     Y           : (n, N)  all training signals
     labels      : (N,)    class index per signal
     atom_labels : (K,)    class index per atom
+    seed        : int     seed for the random-atom fallback, so a Monte Carlo CV
+                          run can make each seed's initialisation independent
 
     Returns
     -------
@@ -329,7 +332,7 @@ def init_dictionary_svd(
     K = atom_labels.shape[0]
     D0          = np.zeros((n, K))
     num_classes = int(atom_labels.max()) + 1
-    rng         = np.random.default_rng(seed=42)
+    rng         = np.random.default_rng(seed=seed)
 
     for c in range(num_classes):
         signal_mask = labels == c
@@ -459,6 +462,9 @@ class LCKSVDConfig:
     lambda1  : ridge regularisation for W initialisation
     lambda2  : ridge regularisation for A initialisation
     variant  : 'lcksvd1' or 'lcksvd2'
+    seed     : seed for the stochastic parts of initialisation. Mirrors
+               AKSVD's `seed`, so an MC-CV run can give each master seed its
+               own dictionary initialisation.
     """
     K: int        = 256
     sparsity: int = 30
@@ -469,6 +475,7 @@ class LCKSVDConfig:
     lambda1: float = 1e-4
     lambda2: float = 1e-4
     variant: str  = "lcksvd2"
+    seed: int     = 42
 
 
 # ---------------------------------------------------------------------------
@@ -543,7 +550,7 @@ class LCKSVD:
 
         # ---- Step 3: Initialise D^(0) via per-class SVD ----------------
         logger.info("Initialising dictionary via per-class SVD ...")
-        D0 = init_dictionary_svd(Y, labels, atom_labels)
+        D0 = init_dictionary_svd(Y, labels, atom_labels, cfg.seed)
 
         # ---- Step 4: Initialise sparse codes X^(0) ----------------------
         col_norms  = norm(D0, axis=0, keepdims=True)
