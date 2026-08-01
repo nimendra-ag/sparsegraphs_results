@@ -50,6 +50,10 @@ def _dict_learner_loaders():
         from dict_learners.lcksvd import LCKSVDLearner
         return LCKSVDLearner
 
+    def _frozen_ksvd():
+        from dict_learners.frozen_ksvd_learner import FrozenKSVDLearner
+        return FrozenKSVDLearner
+
     def _pca_then_dict_learner():
         # Comparison arm only (pca/): a PCA reduction composed with a real
         # dictionary learner, presented to the pipeline as one DictLearner.
@@ -60,6 +64,7 @@ def _dict_learner_loaders():
         "FDDLGPU": _fddl_gpu,
         "AKSVD": _aksvd,
         "LCKSVDLearner": _lcksvd,
+        "FrozenKSVDLearner": _frozen_ksvd,
         "PCAThenDictLearner": _pca_then_dict_learner,
     }
 
