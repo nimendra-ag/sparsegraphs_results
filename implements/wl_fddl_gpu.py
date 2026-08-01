@@ -33,7 +33,7 @@ EXPORT_SEED = 42
 
 if __name__ == "__main__":
     data_loader = GraphDataLoader()
-    graphs, y = data_loader.load("nci_full")
+    graphs, y = data_loader.load(DATASET)
 
     encoder = WL(seed=EXPORT_SEED)
     dict_learner = FDDLGPU(seed=EXPORT_SEED)

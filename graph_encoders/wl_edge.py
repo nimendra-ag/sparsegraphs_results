@@ -31,7 +31,6 @@ class EdgeWL(GraphEncoder):
             erase_base_features: bool = True,
             n_vocab: int = 1000,
             min_features: int = 50,
-            max_vocab: int = 10000,
             selection: str = "energy",
             energy: float = 0.99,
             seed: int = 42
@@ -47,12 +46,12 @@ class EdgeWL(GraphEncoder):
         self.erase_base_features = erase_base_features
         self.n_vocab = n_vocab
         self.min_features = min_features
-        # Hard ceiling on the kept vocabulary, applied AFTER the adaptive cut.
-        # Edge refinement produces a far larger raw feature space than node WL
-        # (one label per edge per iteration, and the merged labels are almost
-        # all unique by iteration 2), so this is the guard that keeps the
-        # embedding width — and therefore the dictionary — tractable.
-        self.max_vocab = max_vocab
+        # No hard ceiling on the kept vocabulary: the embedding width is
+        # whatever the adaptive cut below returns. Edge refinement produces a
+        # far larger raw feature space than node WL (one label per edge per
+        # iteration, and the merged labels are almost all unique by iteration
+        # 2), so the energy cut may reach deep into the tail and yield a wide
+        # embedding — that width is now the intended, data-driven outcome.
         # Feature-selection cut on the sorted discriminative-score curve:
         #   "energy" -> keep the top features holding `energy` of the total
         #               score (reaches into the tail, recovers AUC);
@@ -250,14 +249,6 @@ class EdgeWL(GraphEncoder):
         if len(trimmed_vocab) < self.min_features:
             trimmed_vocab = scored_vocab[:self.n_vocab]
 
-        # Cap vocabulary size. The list is score-sorted, so truncating keeps the
-        # strongest features; this only ever bites when the energy cut reaches
-        # deep into the tail of an edge vocabulary that is orders of magnitude
-        # larger than the node-WL one.
-        if len(trimmed_vocab) > self.max_vocab:
-            trimmed_vocab = trimmed_vocab[:self.max_vocab]
-            print(f"Capped vocabulary to {self.max_vocab}")
-
         self.n_vocab = len(trimmed_vocab)
         return trimmed_vocab
 
@@ -318,7 +309,6 @@ class EdgeWL(GraphEncoder):
             "erase_base_features": self.erase_base_features,
             "n_vocab": self.n_vocab,
             "min_features": self.min_features,
-            "max_vocab": self.max_vocab,
             "selection": self.selection,
             "energy": self.energy,
             "seed": self.seed,
@@ -367,8 +357,9 @@ class EdgeWL(GraphEncoder):
             n_vocab=config["n_vocab"],
             min_features=config["min_features"],
             # .get keeps older bundles (written before these keys existed)
-            # loadable at their pre-existing defaults.
-            max_vocab=config.get("max_vocab", 10000),
+            # loadable at their pre-existing defaults. A "max_vocab" key from a
+            # pre-energy-cut bundle is ignored — the saved vocab length is
+            # authoritative for the width anyway (see below).
             selection=config.get("selection", "energy"),
             energy=config.get("energy", 0.99),
             seed=config["seed"],

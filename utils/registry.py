@@ -20,6 +20,10 @@ def _encoder_loaders():
         from graph_encoders.wl_edge import EdgeWL
         return EdgeWL
 
+    def _fsm():
+        from graph_encoders.fsm import FSM
+        return FSM
+
     def _wl_full():
         # Comparison arm only (pca/): WL with the feature-selection cut disabled.
         from pca.wl_full import WLFull
@@ -28,6 +32,7 @@ def _encoder_loaders():
     return {
         "WL": _wl,
         "EdgeWL": _edge_wl,
+        "FSM": _fsm,
         "WLFull": _wl_full,
     }
 
