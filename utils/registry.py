@@ -54,6 +54,10 @@ def _dict_learner_loaders():
         from dict_learners.frozen_ksvd_learner import FrozenKSVDLearner
         return FrozenKSVDLearner
 
+    def _frozen_ksvd_gpu():
+        from dict_learners.frozen_ksvd_learner_gpu import FrozenKSVDLearnerGPU
+        return FrozenKSVDLearnerGPU
+
     def _bayesian():
         from dict_learners.bayesian import BayesianDL
         return BayesianDL
@@ -73,6 +77,7 @@ def _dict_learner_loaders():
         "AKSVD": _aksvd,
         "LCKSVDLearner": _lcksvd,
         "FrozenKSVDLearner": _frozen_ksvd,
+        "FrozenKSVDLearnerGPU": _frozen_ksvd_gpu,
         "BayesianDL": _bayesian,
         "BayesianDLGPU": _bayesian_gpu,
         "PCAThenDictLearner": _pca_then_dict_learner,
