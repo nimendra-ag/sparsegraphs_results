@@ -66,6 +66,10 @@ def _dict_learner_loaders():
         from dict_learners.bayesian_gpu import BayesianDLGPU
         return BayesianDLGPU
 
+    def _online_dl():
+        from dict_learners.online_dl import OnlineDL
+        return OnlineDL
+
     def _pca_then_dict_learner():
         # Comparison arm only (pca/): a PCA reduction composed with a real
         # dictionary learner, presented to the pipeline as one DictLearner.
@@ -80,6 +84,7 @@ def _dict_learner_loaders():
         "FrozenKSVDLearnerGPU": _frozen_ksvd_gpu,
         "BayesianDL": _bayesian,
         "BayesianDLGPU": _bayesian_gpu,
+        "OnlineDL": _online_dl,
         "PCAThenDictLearner": _pca_then_dict_learner,
     }
 
