@@ -13,11 +13,10 @@ differs.
 
 FSM replaces WL subtree hashes with ego-network *shape signatures*: for every
 node, the radius-`r` neighbourhood summarised by its node/edge counts and degree
-sequence. Its vocabulary is trimmed on a fixed hybrid budget (frequency +
-per-class support variance) followed by a |Pearson| > 0.95 collinearity drop,
+sequence. Its vocabulary is trimmed on a fixed frequency budget (drop signatures
+seen fewer than `min_count` times, keep the top `n_vocab` by global frequency),
 not the adaptive energy/elbow cut WL and EdgeWL use — so the embedding width
-here is set by `n_vocab` and the correlation filter rather than by the data's
-score curve.
+here is set by `min_count`/`n_vocab` rather than by the data's score curve.
 
 Signatures are plain strings (no builtin hash()), so unlike EdgeWL this arm
 carries no PYTHONHASHSEED caveat.

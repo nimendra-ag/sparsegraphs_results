@@ -1,7 +1,7 @@
 {
   "class": "FDDLGPU",
   "name": "FDDLGPU",
-  "k": 16,
+  "k": 64,
   "lambda1": 0.1,
   "lambda2": 0.1,
   "eta": 1.0,
