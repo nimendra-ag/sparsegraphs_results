@@ -22,7 +22,11 @@ Assumption:
 
 from collections import defaultdict
 from copy import deepcopy
+from uuid import uuid4
+
+import numpy as np
 import networkx as nx
+from joblib import Parallel, delayed, effective_n_jobs
 
 # ---------------------------------------------------------------------------
 # Default label used when graphs have no edge labels.
@@ -528,6 +532,84 @@ def _is_min_recursive(dfs_code, g, min_code):
 
 
 # ===========================================================================
+# Root-level parallelism
+#
+# Step 4 of GraphSet_Projection (paper page 14, lines 7-12) loops over the
+# frequent 1-edge subgraphs and mines each one's descendants. Those iterations
+# are already independent: each builds its own DFS code and its own projected
+# database from the shared, read-only graph database, and appends its findings.
+# Distributing them across processes and concatenating the per-root results IN
+# ROOT ORDER therefore reproduces the serial `frequent_subgraphs` list exactly —
+# same patterns, same order. This changes only WHERE each root is mined, not how.
+#
+# The graph database is shipped to workers as flat numpy arrays recording the
+# exact sequence of add_vertex/add_edge calls `_convert_graphs` made, so a worker
+# replays them into byte-identical Graph objects (adjacency-list order included).
+# joblib memmaps those arrays, and each worker rebuilds the database once and
+# caches it, rather than once per root.
+#
+# MEMORY: each worker holds its own database plus the projected database of the
+# root it is currently mining. The database itself is modest (measured ~160 MB
+# for nci_full's 18470-graph vocabulary split, from an 8.5 MB shipped payload),
+# but a high-support root's projected embeddings are not, and n_jobs of those
+# now exist at once instead of one. If a run dies on memory rather than time,
+# lower n_jobs before anything else — halving it halves the peak.
+# ===========================================================================
+
+# Below this many database graphs the process-pool overhead outweighs the mining
+# it distributes, so `run` stays in-process regardless of n_jobs.
+_PARALLEL_MIN_GRAPHS = 200
+
+_WORKER_DB_CACHE = {}
+
+
+def _rebuild_database(payload):
+    """Replay a serialised database into Graph objects."""
+    v_offsets = payload["v_offsets"]
+    vlabels = payload["vlabels"]
+    e_offsets = payload["e_offsets"]
+    edges = payload["edges"]
+
+    database = []
+    for gid in range(len(v_offsets) - 1):
+        g = Graph(gid=gid)
+        for vid, vlabel in enumerate(vlabels[v_offsets[gid]:v_offsets[gid + 1]]):
+            g.add_vertex(vid, int(vlabel))
+        for frm, to, elabel in edges[e_offsets[gid]:e_offsets[gid + 1]]:
+            g.add_edge(int(frm), int(to), int(elabel))
+        database.append(g)
+    return database
+
+
+def _worker_database(token, payload):
+    """The rebuilt database for this run, built once per worker process.
+
+    loky reuses worker processes across tasks, so the cache turns a per-root
+    rebuild into a per-worker one. Only the current run's database is kept.
+    """
+    database = _WORKER_DB_CACHE.get(token)
+    if database is None:
+        database = _rebuild_database(payload)
+        _WORKER_DB_CACHE.clear()
+        _WORKER_DB_CACHE[token] = database
+    return database
+
+
+def _mine_root_worker(root, token, payload, min_support, min_num_vertices,
+                      max_num_vertices):
+    """Mine one frequent 1-edge root in a worker process."""
+    miner = GSpan(
+        min_support=min_support,
+        min_num_vertices=min_num_vertices,
+        max_num_vertices=max_num_vertices,
+        verbose=False,   # per-root progress would interleave unreadably
+    )
+    miner._database = _worker_database(token, payload)
+    miner._mine_root(root)
+    return miner.frequent_subgraphs
+
+
+# ===========================================================================
 # gSpan Main Class
 # ===========================================================================
 
@@ -547,6 +629,10 @@ class GSpan:
         Set this to control pattern size and runtime.
     verbose : bool
         If True, print progress during mining.
+    n_jobs : int
+        Processes to mine the frequent 1-edge roots across (default 1 = the
+        original in-process loop). -1 uses every core. The mined pattern list
+        is identical either way; see the "Root-level parallelism" note above.
 
     Usage
     -----
@@ -556,13 +642,15 @@ class GSpan:
     """
 
     def __init__(self, min_support=10, min_num_vertices=1,
-                 max_num_vertices=float('inf'), verbose=False):
+                 max_num_vertices=float('inf'), verbose=False, n_jobs=1):
         self.min_support = min_support
         self.min_num_vertices = min_num_vertices
         self.max_num_vertices = max_num_vertices
         self.verbose = verbose
+        self.n_jobs = n_jobs
 
         self._database = []          # list of Graph
+        self._db_payload = None      # flat arrays mirroring _database, for workers
         self._dfs_code = DFSCode()   # current DFS code being extended
         self.frequent_subgraphs = [] # results: list of (DFSCode copy, support, gid_set)
         self._report_count = 0
@@ -608,6 +696,16 @@ class GSpan:
             elabel_map = {}
 
         graphs = []
+        # Mirror of the add_vertex/add_edge call sequence below, so a worker
+        # process can replay it into byte-identical Graph objects (see
+        # `_rebuild_database`). Recorded here rather than derived from the built
+        # objects, because per-vertex adjacency order is insertion order and is
+        # not recoverable afterwards.
+        flat_vlabels = []
+        flat_edges = []
+        v_offsets = [0]
+        e_offsets = [0]
+
         for gid, nx_g in enumerate(nx_graphs):
             g = Graph(gid=gid)
             # Re-index vertices to 0..n-1
@@ -618,6 +716,7 @@ class GSpan:
                 new_id = node_remap[old_id]
                 raw_label = nx_g.nodes[old_id].get(node_label_attr, 'UNK')
                 g.add_vertex(new_id, vlabel_map[raw_label])
+                flat_vlabels.append(vlabel_map[raw_label])
 
             for u, v, data in nx_g.edges(data=True):
                 nu, nv = node_remap[u], node_remap[v]
@@ -626,10 +725,20 @@ class GSpan:
                 else:
                     el = default_edge_label
                 g.add_edge(nu, nv, el)
+                flat_edges.append((nu, nv, el))
 
+            v_offsets.append(len(flat_vlabels))
+            e_offsets.append(len(flat_edges))
             graphs.append(g)
 
-        return graphs, vlabel_map, elabel_map
+        payload = {
+            "v_offsets": np.asarray(v_offsets, dtype=np.int64),
+            "vlabels": np.asarray(flat_vlabels, dtype=np.int32),
+            "e_offsets": np.asarray(e_offsets, dtype=np.int64),
+            "edges": np.asarray(flat_edges, dtype=np.int32).reshape(-1, 3),
+        }
+
+        return graphs, vlabel_map, elabel_map, payload
 
     # -------------------------------------------------------------------
     # Algorithm 2: GraphSet_Projection  (Paper page 14)
@@ -659,7 +768,8 @@ class GSpan:
         self._report_count = 0
 
         # Convert to internal representation
-        self._database, self.vlabel_map, self.elabel_map = self._convert_graphs(
+        (self._database, self.vlabel_map, self.elabel_map,
+         self._db_payload) = self._convert_graphs(
             nx_graphs, node_label_attr, edge_label_attr, default_edge_label
         )
         self.inv_vlabel_map = {v: k for k, v in self.vlabel_map.items()}
@@ -725,39 +835,80 @@ class GSpan:
             print(f"[gSpan] Frequent 1-edge subgraphs: {len(freq_1edges)}")
 
         # ----- Step 4 (lines 7-12): For each frequent 1-edge, mine all descendants -----
-        for vl_frm, el, vl_to, gids in freq_1edges:
-            # Initialize the DFS code with this 1-edge
-            self._dfs_code = DFSCode()
-            self._dfs_code.push_back(0, 1, vl_frm, el, vl_to)
+        # Roots are independent, so this loop may run in-process or across
+        # workers; results are concatenated in root order either way, which is
+        # the order the in-process loop would have appended them in.
+        n_jobs = self._resolve_n_jobs(len(freq_1edges))
 
-            # Build the initial projected database
-            projected = Projected()
-            for gid in gids:
-                g = self._database[gid]
-                for vid, v in g.vertices.items():
-                    if v.vlabel != vl_frm:
-                        continue
-                    for e in v.edges:
-                        if e.elabel != el:
-                            continue
-                        if g.vertices[e.to].vlabel != vl_to:
-                            continue
-                        # For canonical 1-edges where vl_frm == vl_to,
-                        # only take one direction to avoid duplicates.
-                        if vl_frm == vl_to and e.frm > e.to:
-                            continue
-                        projected.append(PDFSEntry(gid, e, None))
-
-            # Subgraph_Mining (Subprocedure 1)
-            self._subgraph_mining(projected)
-
-            self._dfs_code = DFSCode()
+        if n_jobs == 1:
+            for root in freq_1edges:
+                self._mine_root(root)
+        else:
+            if self.verbose:
+                print(f"[gSpan] Mining {len(freq_1edges)} roots across "
+                      f"{n_jobs} processes")
+            token = uuid4().hex
+            per_root = Parallel(n_jobs=n_jobs)(
+                delayed(_mine_root_worker)(
+                    root, token, self._db_payload,
+                    self.min_support, self.min_num_vertices,
+                    self.max_num_vertices,
+                )
+                for root in freq_1edges
+            )
+            for patterns in per_root:
+                self.frequent_subgraphs.extend(patterns)
+            self._report_count = len(self.frequent_subgraphs)
 
         if self.verbose:
             print(f"[gSpan] Mining complete. Found {len(self.frequent_subgraphs)} "
                   f"frequent subgraphs.")
 
         return self
+
+    def _resolve_n_jobs(self, n_roots):
+        """Processes to mine roots across, after the small-input cutoffs."""
+        if self.n_jobs == 1 or n_roots < 2:
+            return 1
+        if len(self._database) < _PARALLEL_MIN_GRAPHS:
+            return 1
+        return max(1, min(effective_n_jobs(self.n_jobs), n_roots))
+
+    def _mine_root(self, root):
+        """Mine every descendant of one frequent 1-edge subgraph.
+
+        Extracted verbatim from the body of `run`'s Step 4 loop so it can be
+        invoked either in-process or in a worker. Appends to
+        `self.frequent_subgraphs` exactly as the inline loop did.
+        """
+        vl_frm, el, vl_to, gids = root
+
+        # Initialize the DFS code with this 1-edge
+        self._dfs_code = DFSCode()
+        self._dfs_code.push_back(0, 1, vl_frm, el, vl_to)
+
+        # Build the initial projected database
+        projected = Projected()
+        for gid in gids:
+            g = self._database[gid]
+            for vid, v in g.vertices.items():
+                if v.vlabel != vl_frm:
+                    continue
+                for e in v.edges:
+                    if e.elabel != el:
+                        continue
+                    if g.vertices[e.to].vlabel != vl_to:
+                        continue
+                    # For canonical 1-edges where vl_frm == vl_to,
+                    # only take one direction to avoid duplicates.
+                    if vl_frm == vl_to and e.frm > e.to:
+                        continue
+                    projected.append(PDFSEntry(gid, e, None))
+
+        # Subgraph_Mining (Subprocedure 1)
+        self._subgraph_mining(projected)
+
+        self._dfs_code = DFSCode()
 
     # -------------------------------------------------------------------
     # Subprocedure 1: Subgraph_Mining  (Paper page 15)

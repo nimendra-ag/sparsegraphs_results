@@ -1,0 +1,14 @@
+{
+  "class": "GSpanCORK",
+  "name": "CorrespondenceAwareGSpanCORK",
+  "min_support_ratio": 0.1,
+  "max_num_vertices": 10,
+  "min_num_vertices": 2,
+  "cork_tolerance": 0,
+  "cork_max_features": null,
+  "node_label_attr": "feature",
+  "edge_label_attr": null,
+  "verbose": true,
+  "n_vocab": 93,
+  "seed": 42
+}
