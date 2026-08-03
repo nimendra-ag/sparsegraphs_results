@@ -52,7 +52,7 @@ class FSM(GraphEncoder):
             self,
             radius: int = 1,
             n_vocab: int = 1000,
-            min_count: int = 5,
+            min_count: int = 2,
             node_label_attr: str = "feature",
             seed: int = 42
     ):
