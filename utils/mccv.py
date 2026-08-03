@@ -17,11 +17,20 @@ Split policy is identical to utils/export.py:
     ML_train    (20%) -> classifiers
     val         (15%) -> decision-threshold tuning
     test        (15%) -> held-out evaluation
+
+Every run folder gets a `manifest.json` alongside the CSVs, describing what was
+built rather than how it scored: one entry per seed, carrying above all the
+number of features the encoder's adaptive selection kept for that seed's
+partition (`n_selected_features`), plus the atom count, derived sub-seeds and
+split sizes. Workers append to it as they finish and the aggregator folds the
+counts into a run-level mean/std, so the vocabulary size can be compared across
+seeds without digging through worker logs.
 """
 
 import os
 import sys
 import csv
+import json
 import time
 import argparse
 import subprocess
@@ -98,6 +107,11 @@ PER_RUN_FILE = "per_run_metrics.csv"
 SUMMARY_FILE = "summary_mean_std.csv"
 TIMINGS_FILE = "per_run_timings.csv"
 TIMINGS_SUMMARY_FILE = "summary_timings.csv"
+# Run-level provenance. The CSVs answer "how well did it score"; this answers
+# "what was actually built" — most importantly how many features the encoder's
+# adaptive selection kept for each seed, which is resampled per seed and is
+# otherwise only visible in the worker's stdout.
+MANIFEST_FILE = "manifest.json"
 
 
 @contextmanager
@@ -154,8 +168,9 @@ def run_once(master_seed, encoder_factory, dict_learner_factory,
     for that component, so each run gets a freshly-constructed pair and nothing
     leaks across seeds.
 
-    Returns (row, total_atoms, timings) where `timings` is an ordered
-    {phase_label: seconds} dict of the wall-clock spent in each phase.
+    Returns (row, total_atoms, timings, seed_manifest) where `timings` is an
+    ordered {phase_label: seconds} dict of the wall-clock spent in each phase and
+    `seed_manifest` is this seed's provenance (feature counts, atoms, classes).
     """
     timings = {}  # ordered: insertion order == pipeline order
     seed_t0 = time.perf_counter()
@@ -199,6 +214,16 @@ def run_once(master_seed, encoder_factory, dict_learner_factory,
             encoder, dict_learner, G_vocab_train, y_vocab_train
         )
     total_atoms = dict_learner.n_atoms()
+
+    # Snapshot the vocabulary the adaptive cut settled on for THIS partition,
+    # before anything downstream can touch the encoder.
+    seed_manifest = _seed_manifest_entry(
+        master_seed, encoder, dict_learner, total_atoms,
+        seeds={"split": s_split, "encoder": s_enc,
+               "dict_learner": s_dict, "classifier": s_clf},
+        split_sizes={"vocab_train": len(G_vocab_train), "ml_train": len(G_ML_train),
+                     "val": len(G_val), "test": len(G_test)},
+    )
 
     # Codes for every downstream split, computed once and reused.
     with _phase(timings, "sparse_codes_train"):
@@ -290,6 +315,7 @@ def run_once(master_seed, encoder_factory, dict_learner_factory,
         row.update(_flatten("SRC_fddl", nan_metrics))
 
     timings["seed_total"] = time.perf_counter() - seed_t0
+    seed_manifest["seed_total_sec"] = round(timings["seed_total"], 3)
 
     # Per-seed breakdown, biggest phase first, so the bottleneck is obvious.
     print(f"\n----- timing breakdown | seed={master_seed} -----")
@@ -297,7 +323,7 @@ def run_once(master_seed, encoder_factory, dict_learner_factory,
         share = 100.0 * secs / timings["seed_total"] if timings["seed_total"] else 0.0
         print(f"  {label:22s} {secs:8.1f}s  ({share:4.1f}%)")
 
-    return row, total_atoms, timings
+    return row, total_atoms, timings, seed_manifest
 
 
 # --- Per-seed persistence ---------------------------------------------------
@@ -337,6 +363,183 @@ def append_timings_row(out_dir, master_seed, timings):
             writer.writerow(["master_seed"] + phase_names)
         writer.writerow([master_seed] + [f"{timings[p]:.3f}" for p in phase_names])
     print(f"Appended seed={master_seed} timings -> {path}")
+
+
+# --- manifest.json ----------------------------------------------------------
+# Written by the orchestrator at launch, appended to by each worker as its seed
+# finishes, and summarised at aggregation time. Like the CSVs it is append-only
+# in spirit: a re-run of one seed supersedes that seed's entry and leaves the
+# rest alone, so a resumed run ends up with a complete manifest.
+
+def _seed_manifest_entry(master_seed, encoder, dict_learner, total_atoms,
+                         seeds, split_sizes):
+    """Provenance for one seed, captured right after encoder + dictionary fit.
+
+    The headline field is `n_selected_features`: the size of the vocabulary the
+    encoder's adaptive cut kept for this partition. It is resampled with the
+    partition, so it differs seed to seed and is what makes a per-seed manifest
+    worth writing at all.
+
+    Every encoder field is read defensively — the FSM encoder trims on a fixed
+    budget and exposes no score curve, so `n_scored_features` is simply None
+    there rather than a crash mid-run.
+    """
+    scores = getattr(encoder, "selection_scores_", None)
+    n_selected = getattr(encoder, "n_vocab", None)
+    n_scored = len(scores) if scores is not None else None
+    entry = {
+        "master_seed": int(master_seed),
+        # --- adaptive feature selection ---
+        "n_selected_features": int(n_selected) if n_selected is not None else None,
+        "n_scored_features": n_scored,
+        "selection": getattr(encoder, "selection", None),
+        "energy": getattr(encoder, "energy", None),
+        "min_features": getattr(encoder, "min_features", None),
+        # --- dictionary ---
+        "total_atoms": int(total_atoms),
+        "encoder_class": type(encoder).__name__,
+        "dict_learner_class": type(dict_learner).__name__,
+        # --- reproducibility ---
+        "derived_seeds": {k: int(v) for k, v in seeds.items()},
+        "split_sizes": {k: int(v) for k, v in split_sizes.items()},
+        "completed_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    if n_selected is not None and n_scored:
+        entry["kept_fraction"] = round(n_selected / n_scored, 6)
+    # Unsupervised learners have no effective-size notion; BPFA does and it is
+    # the whole point of a non-parametric prior, so record it when offered.
+    effective = getattr(dict_learner, "effective_dictionary_size", None)
+    if effective is not None:
+        entry["effective_dictionary_size"] = int(effective)
+    return entry
+
+
+def _read_manifest(out_dir):
+    """Load manifest.json, or an empty skeleton if the run predates it / is new."""
+    path = os.path.join(out_dir, MANIFEST_FILE)
+    if not os.path.exists(path):
+        return {"runs": []}
+    with open(path, encoding="utf-8") as f:
+        manifest = json.load(f)
+    manifest.setdefault("runs", [])
+    return manifest
+
+
+def _write_manifest(out_dir, manifest):
+    """Write manifest.json atomically.
+
+    Via a temp file + os.replace so a worker killed mid-write (these runs are
+    hours long and get interrupted) leaves the previous manifest intact rather
+    than a truncated file that breaks every later seed's read-modify-write.
+    """
+    os.makedirs(out_dir, exist_ok=True)
+    path = os.path.join(out_dir, MANIFEST_FILE)
+    tmp_path = path + ".tmp"
+    # Push the long per-seed list to the bottom so the run-level header is what
+    # you see on opening the file.
+    ordered = {k: v for k, v in manifest.items() if k != "runs"}
+    ordered["runs"] = manifest.get("runs", [])
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump(ordered, f, indent=2)
+    os.replace(tmp_path, path)
+    return path
+
+
+def init_manifest(out_dir, implementation, dataset, seeds, started_at):
+    """Create (or top up) the run-level header before the first worker starts."""
+    manifest = _read_manifest(out_dir)
+    manifest.update({
+        "implementation": implementation,
+        "dataset": dataset,
+        "started_at": started_at,
+        "planned_seeds": [int(s) for s in seeds],
+        "n_planned_seeds": len(seeds),
+        "split_policy": {"vocab_train": 0.50, "ml_train": 0.20,
+                         "val": 0.15, "test": 0.15},
+    })
+    path = _write_manifest(out_dir, manifest)
+    print(f"Initialised run manifest -> {path}")
+    return path
+
+
+def append_manifest_entry(out_dir, entry, implementation=None, dataset=None):
+    """Record one seed's provenance, replacing any earlier entry for that seed.
+
+    Same last-one-wins rule as `_read_per_run`, so re-running a single seed to
+    fill a gap updates its manifest entry instead of duplicating it.
+
+    `implementation`/`dataset` are setdefault-ed, not overwritten: a worker
+    invoked by hand against a fresh folder still produces an identifiable
+    manifest, while the orchestrator's header stays authoritative.
+    """
+    manifest = _read_manifest(out_dir)
+    if implementation is not None:
+        manifest.setdefault("implementation", implementation)
+    if dataset is not None:
+        manifest.setdefault("dataset", dataset)
+    seed = entry["master_seed"]
+    manifest["runs"] = [r for r in manifest["runs"] if r.get("master_seed") != seed]
+    manifest["runs"].append(entry)
+    manifest["runs"].sort(key=lambda r: r.get("master_seed", 0))
+    path = _write_manifest(out_dir, manifest)
+    print(f"Recorded seed={seed} in manifest "
+          f"(selected features: {entry['n_selected_features']}) -> {path}")
+    return path
+
+
+def summarize_manifest(out_dir):
+    """Fold the per-seed entries into run-level totals. Best-effort: an older
+    run folder with no manifest, or one where no seed got far enough to record
+    an entry, is left untouched rather than gaining an empty summary."""
+    path = os.path.join(out_dir, MANIFEST_FILE)
+    if not os.path.exists(path):
+        return
+    manifest = _read_manifest(out_dir)
+    runs = manifest["runs"]
+    if not runs:
+        return
+
+    manifest["completed_seeds"] = [r["master_seed"] for r in runs]
+    manifest["n_completed_seeds"] = len(runs)
+    planned = manifest.get("planned_seeds")
+    if planned is not None:
+        manifest["missing_seeds"] = [
+            s for s in planned if s not in manifest["completed_seeds"]
+        ]
+
+    counts = [r["n_selected_features"] for r in runs
+              if r.get("n_selected_features") is not None]
+    if counts:
+        arr = np.array(counts, dtype=float)
+        manifest["selected_features_summary"] = {
+            "per_seed": {str(r["master_seed"]): r["n_selected_features"]
+                         for r in runs if r.get("n_selected_features") is not None},
+            "mean": round(float(arr.mean()), 2),
+            # ddof=1 to match the metric summary; a single seed has no spread.
+            "std_ddof1": round(float(arr.std(ddof=1)), 2) if len(arr) > 1 else 0.0,
+            "min": int(arr.min()),
+            "max": int(arr.max()),
+            "n": len(counts),
+        }
+
+    manifest["updated_at"] = datetime.now().isoformat(timespec="seconds")
+    _write_manifest(out_dir, manifest)
+    print(f"Updated manifest      -> {path}")
+
+
+def finalize_manifest(out_dir, total_atoms, failed_seeds, ended_at):
+    """Stamp the outcome fields the orchestrator only knows once every seed has
+    run. Kept separate from `summarize_manifest` so `--aggregate` on an existing
+    folder can refresh the summary without inventing a new end time."""
+    path = os.path.join(out_dir, MANIFEST_FILE)
+    if not os.path.exists(path):
+        return
+    manifest = _read_manifest(out_dir)
+    manifest["total_atoms"] = int(total_atoms) if total_atoms is not None else None
+    manifest["failed_seeds"] = [int(s) for s in failed_seeds]
+    manifest["ended_at"] = ended_at
+    manifest["updated_at"] = datetime.now().isoformat(timespec="seconds")
+    _write_manifest(out_dir, manifest)
 
 
 def _read_per_run(out_dir):
@@ -449,6 +652,8 @@ def aggregate_and_report(out_dir):
 
     # Cross-seed timing breakdown (best-effort; no-op if timings weren't logged).
     aggregate_timings(out_dir)
+    # Fold the per-seed feature counts into run-level totals (no-op pre-manifest).
+    summarize_manifest(out_dir)
 
     return total_atoms, len(rows)
 
@@ -460,11 +665,13 @@ def run_seed_worker(master_seed, out_dir, encoder_factory, dict_learner_factory,
     """Run one seed and append its metrics, then return. Designed to be the
     whole lifetime of a subprocess so that process exit frees all RAM/VRAM."""
     print(f"\n########## Monte Carlo CV run | master_seed={master_seed} ##########")
-    row, total_atoms, timings = run_once(
+    row, total_atoms, timings, seed_manifest = run_once(
         master_seed, encoder_factory, dict_learner_factory, implementation, dataset
     )
     append_run_row(out_dir, master_seed, total_atoms, row)
     append_timings_row(out_dir, master_seed, timings)
+    append_manifest_entry(out_dir, seed_manifest,
+                          implementation=implementation, dataset=dataset)
 
 
 # --- Orchestrator: one process per seed -------------------------------------
@@ -490,6 +697,7 @@ def orchestrate(seeds, worker_script, implementation, dataset, fail_fast=False):
     )
     os.makedirs(out_dir, exist_ok=True)
     print(f"Monte Carlo CV | one process per seed | out_dir={out_dir}")
+    init_manifest(out_dir, implementation, dataset, seeds, started_at)
 
     failed = []
     for seed in seeds:
@@ -513,6 +721,8 @@ def orchestrate(seeds, worker_script, implementation, dataset, fail_fast=False):
         )
 
     total_atoms, _ = aggregate_and_report(out_dir)
+    ended_at = datetime.now().strftime("%Y%m%d_%H%M%S")
+    finalize_manifest(out_dir, total_atoms, failed, ended_at)
 
     if failed:
         succeeded = [s for s in seeds if s not in failed]
@@ -526,7 +736,6 @@ def orchestrate(seeds, worker_script, implementation, dataset, fail_fast=False):
     # Finalise the folder name with the atom count + start/end timestamps, to
     # match the single-process convention. Best-effort: never lose results to a
     # rename failure (e.g. an open handle / antivirus lock on Windows).
-    ended_at = datetime.now().strftime("%Y%m%d_%H%M%S")
     final_dir = os.path.join(
         "results",
         f"mc_cv_{implementation}_{dataset}_atoms{total_atoms}_{started_at}_{ended_at}",

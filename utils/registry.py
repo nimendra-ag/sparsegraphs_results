@@ -54,6 +54,10 @@ def _dict_learner_loaders():
         from dict_learners.frozen_ksvd_learner import FrozenKSVDLearner
         return FrozenKSVDLearner
 
+    def _frozen_ksvd_gpu():
+        from dict_learners.frozen_ksvd_learner_gpu import FrozenKSVDLearnerGPU
+        return FrozenKSVDLearnerGPU
+
     def _bayesian():
         from dict_learners.bayesian import BayesianDL
         return BayesianDL
@@ -61,6 +65,10 @@ def _dict_learner_loaders():
     def _bayesian_gpu():
         from dict_learners.bayesian_gpu import BayesianDLGPU
         return BayesianDLGPU
+
+    def _online_dl():
+        from dict_learners.online_dl import OnlineDL
+        return OnlineDL
 
     def _pca_then_dict_learner():
         # Comparison arm only (pca/): a PCA reduction composed with a real
@@ -73,8 +81,10 @@ def _dict_learner_loaders():
         "AKSVD": _aksvd,
         "LCKSVDLearner": _lcksvd,
         "FrozenKSVDLearner": _frozen_ksvd,
+        "FrozenKSVDLearnerGPU": _frozen_ksvd_gpu,
         "BayesianDL": _bayesian,
         "BayesianDLGPU": _bayesian_gpu,
+        "OnlineDL": _online_dl,
         "PCAThenDictLearner": _pca_then_dict_learner,
     }
 

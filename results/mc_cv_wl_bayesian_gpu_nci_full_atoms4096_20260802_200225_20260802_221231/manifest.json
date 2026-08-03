@@ -1,0 +1,183 @@
+{
+  "implementation": "wl_bayesian_gpu",
+  "dataset": "nci_full",
+  "started_at": "20260802_200225",
+  "planned_seeds": [
+    19,
+    37,
+    69,
+    83,
+    76
+  ],
+  "n_planned_seeds": 5,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "completed_seeds": [
+    19,
+    37,
+    69,
+    76,
+    83
+  ],
+  "n_completed_seeds": 5,
+  "missing_seeds": [],
+  "selected_features_summary": {
+    "per_seed": {
+      "19": 1759,
+      "37": 1749,
+      "69": 1705,
+      "76": 1792,
+      "83": 1779
+    },
+    "mean": 1756.8,
+    "std_ddof1": 33.47,
+    "min": 1705,
+    "max": 1792,
+    "n": 5
+  },
+  "updated_at": "2026-08-02T22:12:31",
+  "total_atoms": 4096,
+  "failed_seeds": [],
+  "ended_at": "20260802_221231",
+  "runs": [
+    {
+      "master_seed": 19,
+      "n_selected_features": 1759,
+      "n_scored_features": 10006,
+      "selection": "energy",
+      "energy": 0.99,
+      "min_features": 50,
+      "total_atoms": 4096,
+      "encoder_class": "WL",
+      "dict_learner_class": "BayesianDLGPU",
+      "derived_seeds": {
+        "split": 1373742719,
+        "encoder": 3755165573,
+        "dict_learner": 1273371206,
+        "classifier": 3859852215
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-02T20:05:52",
+      "kept_fraction": 0.175795,
+      "effective_dictionary_size": 4096,
+      "seed_total_sec": 1555.422
+    },
+    {
+      "master_seed": 37,
+      "n_selected_features": 1749,
+      "n_scored_features": 10080,
+      "selection": "energy",
+      "energy": 0.99,
+      "min_features": 50,
+      "total_atoms": 4096,
+      "encoder_class": "WL",
+      "dict_learner_class": "BayesianDLGPU",
+      "derived_seeds": {
+        "split": 4253695468,
+        "encoder": 2255245073,
+        "dict_learner": 797235256,
+        "classifier": 2828548446
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-02T20:31:51",
+      "kept_fraction": 0.173512,
+      "effective_dictionary_size": 4096,
+      "seed_total_sec": 1558.885
+    },
+    {
+      "master_seed": 69,
+      "n_selected_features": 1705,
+      "n_scored_features": 10003,
+      "selection": "energy",
+      "energy": 0.99,
+      "min_features": 50,
+      "total_atoms": 4096,
+      "encoder_class": "WL",
+      "dict_learner_class": "BayesianDLGPU",
+      "derived_seeds": {
+        "split": 1224679019,
+        "encoder": 253615201,
+        "dict_learner": 2898448067,
+        "classifier": 4099649580
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-02T20:57:49",
+      "kept_fraction": 0.170449,
+      "effective_dictionary_size": 4096,
+      "seed_total_sec": 1524.723
+    },
+    {
+      "master_seed": 76,
+      "n_selected_features": 1792,
+      "n_scored_features": 9951,
+      "selection": "energy",
+      "energy": 0.99,
+      "min_features": 50,
+      "total_atoms": 4096,
+      "encoder_class": "WL",
+      "dict_learner_class": "BayesianDLGPU",
+      "derived_seeds": {
+        "split": 311077664,
+        "encoder": 2982226596,
+        "dict_learner": 2200956355,
+        "classifier": 2043071379
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-02T21:49:48",
+      "kept_fraction": 0.180082,
+      "effective_dictionary_size": 4096,
+      "seed_total_sec": 1569.188
+    },
+    {
+      "master_seed": 83,
+      "n_selected_features": 1779,
+      "n_scored_features": 9957,
+      "selection": "energy",
+      "energy": 0.99,
+      "min_features": 50,
+      "total_atoms": 4096,
+      "encoder_class": "WL",
+      "dict_learner_class": "BayesianDLGPU",
+      "derived_seeds": {
+        "split": 1521106599,
+        "encoder": 3953570046,
+        "dict_learner": 2423180102,
+        "classifier": 2952730631
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-02T21:23:27",
+      "kept_fraction": 0.178668,
+      "effective_dictionary_size": 4096,
+      "seed_total_sec": 1574.843
+    }
+  ]
+}
