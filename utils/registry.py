@@ -24,6 +24,10 @@ def _encoder_loaders():
         from graph_encoders.fsm import FSM
         return FSM
 
+    def _gspan_cork():
+        from graph_encoders.gspan_cork import GSpanCORK
+        return GSpanCORK
+
     def _wl_full():
         # Comparison arm only (pca/): WL with the feature-selection cut disabled.
         from pca.wl_full import WLFull
@@ -33,6 +37,7 @@ def _encoder_loaders():
         "WL": _wl,
         "EdgeWL": _edge_wl,
         "FSM": _fsm,
+        "GSpanCORK": _gspan_cork,
         "WLFull": _wl_full,
     }
 

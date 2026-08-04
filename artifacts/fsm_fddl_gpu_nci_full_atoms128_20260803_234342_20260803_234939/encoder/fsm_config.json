@@ -1,0 +1,9 @@
+{
+  "class": "FSM",
+  "name": "FSM",
+  "radius": 1,
+  "n_vocab": 477,
+  "min_count": 2,
+  "node_label_attr": "feature",
+  "seed": 42
+}

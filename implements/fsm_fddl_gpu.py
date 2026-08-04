@@ -12,16 +12,16 @@ around every node, summarised by node/edge counts + degree sequence) instead of
 WL subtree hashes. Everything downstream (zero-row filtering, FDDL, scaling,
 evaluation, bundle layout) is shared code, so the runs are directly comparable.
 
-There is no fsm_fddl_gpu_mccv.py yet, so the eval/ metrics written here are
-currently the only FSM numbers — treat them as a single-split provenance figure,
-NOT as a headline result. The headline for the other arms is the MC-CV mean +/-
-std (implements/wl_fddl_gpu_mccv.py, implements/wl_edge_fddl_gpu_mccv.py).
+The eval/ metrics written here are a single-split provenance figure, NOT a
+headline result. The headline for this arm is the MC-CV mean +/- std from
+implements/fsm_fddl_gpu_mccv.py (as it is for WL and EdgeWL from their own
+_mccv scripts).
 
-CAVEAT — FSM trims its vocabulary on a fixed budget (`n_vocab`, hybrid
-frequency + per-class-support-variance) followed by a |Pearson| > 0.95
-collinearity drop, rather than the adaptive energy/elbow cut WL and EdgeWL use.
-It therefore exposes no `selection_scores_`, and the export skips the elbow
-analytics plot for this arm.
+CAVEAT — FSM trims its vocabulary on a fixed frequency budget (drop signatures
+seen fewer than `min_count` times, keep the top `n_vocab` by global frequency),
+rather than the adaptive energy/elbow cut WL and EdgeWL use. It therefore
+exposes no `selection_scores_`, and the export skips the elbow analytics plot
+for this arm.
 """
 
 import sys
