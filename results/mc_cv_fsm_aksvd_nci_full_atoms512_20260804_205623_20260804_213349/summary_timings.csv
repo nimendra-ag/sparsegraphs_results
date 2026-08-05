@@ -1,0 +1,16 @@
+phase,mean_sec,std_sec,min_sec,max_sec,n
+data_load,11.80,0.02,11.77,11.84,5
+partition,0.03,0.00,0.03,0.03,5
+fit_encoder_dict,260.82,0.64,259.88,261.58,5
+sparse_codes_train,66.08,0.70,65.24,66.90,5
+sparse_codes_val,48.58,1.05,47.58,50.32,5
+sparse_codes_test,49.03,0.88,48.31,50.38,5
+val_logreg,0.07,0.01,0.05,0.08,5
+val_gboost,2.78,0.06,2.70,2.84,5
+val_svm,0.15,0.00,0.14,0.15,5
+val_rf,1.31,0.10,1.14,1.40,5
+test_logreg,0.06,0.01,0.05,0.08,5
+test_gboost,2.80,0.06,2.70,2.84,5
+test_svm,0.14,0.00,0.14,0.15,5
+test_rf,1.31,0.10,1.14,1.40,5
+seed_total,446.06,1.70,444.64,448.84,5

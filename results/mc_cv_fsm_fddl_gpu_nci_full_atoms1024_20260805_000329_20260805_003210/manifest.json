@@ -1,0 +1,89 @@
+{
+  "implementation": "fsm_fddl_gpu",
+  "dataset": "nci_full",
+  "started_at": "20260805_000329",
+  "planned_seeds": [
+    92,
+    98
+  ],
+  "n_planned_seeds": 2,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "completed_seeds": [
+    92,
+    98
+  ],
+  "n_completed_seeds": 2,
+  "missing_seeds": [],
+  "selected_features_summary": {
+    "per_seed": {
+      "92": 480,
+      "98": 466
+    },
+    "mean": 473.0,
+    "std_ddof1": 9.9,
+    "min": 466,
+    "max": 480,
+    "n": 2
+  },
+  "updated_at": "2026-08-05T00:32:10",
+  "total_atoms": 1024,
+  "failed_seeds": [],
+  "ended_at": "20260805_003210",
+  "runs": [
+    {
+      "master_seed": 92,
+      "n_selected_features": 480,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 1024,
+      "encoder_class": "FSM",
+      "dict_learner_class": "FDDLGPU",
+      "derived_seeds": {
+        "split": 1198173411,
+        "encoder": 2350650119,
+        "dict_learner": 3889802888,
+        "classifier": 2844263258
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-05T00:09:29",
+      "seed_total_sec": 867.272
+    },
+    {
+      "master_seed": 98,
+      "n_selected_features": 466,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 1024,
+      "encoder_class": "FSM",
+      "dict_learner_class": "FDDLGPU",
+      "derived_seeds": {
+        "split": 3470170374,
+        "encoder": 3264303175,
+        "dict_learner": 1892698021,
+        "classifier": 1347504707
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-05T00:23:59",
+      "seed_total_sec": 844.338
+    }
+  ]
+}
