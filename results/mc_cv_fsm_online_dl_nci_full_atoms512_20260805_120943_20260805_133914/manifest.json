@@ -1,0 +1,89 @@
+{
+  "implementation": "fsm_online_dl",
+  "dataset": "nci_full",
+  "started_at": "20260805_120943",
+  "planned_seeds": [
+    23,
+    31
+  ],
+  "n_planned_seeds": 2,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "completed_seeds": [
+    23,
+    31
+  ],
+  "n_completed_seeds": 2,
+  "missing_seeds": [],
+  "selected_features_summary": {
+    "per_seed": {
+      "23": 474,
+      "31": 477
+    },
+    "mean": 475.5,
+    "std_ddof1": 2.12,
+    "min": 474,
+    "max": 477,
+    "n": 2
+  },
+  "updated_at": "2026-08-05T13:39:14",
+  "total_atoms": 512,
+  "failed_seeds": [],
+  "ended_at": "20260805_133914",
+  "runs": [
+    {
+      "master_seed": 23,
+      "n_selected_features": 474,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 512,
+      "encoder_class": "FSM",
+      "dict_learner_class": "OnlineDL",
+      "derived_seeds": {
+        "split": 1474229743,
+        "encoder": 3620327395,
+        "dict_learner": 1396090822,
+        "classifier": 2040902297
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-05T12:50:37",
+      "seed_total_sec": 2655.416
+    },
+    {
+      "master_seed": 31,
+      "n_selected_features": 477,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 512,
+      "encoder_class": "FSM",
+      "dict_learner_class": "OnlineDL",
+      "derived_seeds": {
+        "split": 2523303487,
+        "encoder": 2774764755,
+        "dict_learner": 2905164848,
+        "classifier": 902140752
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-05T13:35:47",
+      "seed_total_sec": 2709.116
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "implementation": "fsm_online_dl",
+  "dataset": "nci_full",
+  "started_at": "20260805_135229",
+  "planned_seeds": [
+    78,
+    81
+  ],
+  "n_planned_seeds": 2,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "completed_seeds": [
+    78,
+    81
+  ],
+  "n_completed_seeds": 2,
+  "missing_seeds": [],
+  "selected_features_summary": {
+    "per_seed": {
+      "78": 484,
+      "81": 480
+    },
+    "mean": 482.0,
+    "std_ddof1": 2.83,
+    "min": 480,
+    "max": 484,
+    "n": 2
+  },
+  "updated_at": "2026-08-05T17:09:44",
+  "total_atoms": 1024,
+  "failed_seeds": [],
+  "ended_at": "20260805_170944",
+  "runs": [
+    {
+      "master_seed": 78,
+      "n_selected_features": 484,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 1024,
+      "encoder_class": "FSM",
+      "dict_learner_class": "OnlineDL",
+      "derived_seeds": {
+        "split": 1697051240,
+        "encoder": 3156679512,
+        "dict_learner": 3906577307,
+        "classifier": 2110679586
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-05T15:26:12",
+      "seed_total_sec": 5865.795
+    },
+    {
+      "master_seed": 81,
+      "n_selected_features": 480,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 1024,
+      "encoder_class": "FSM",
+      "dict_learner_class": "OnlineDL",
+      "derived_seeds": {
+        "split": 3363100255,
+        "encoder": 3301135762,
+        "dict_learner": 3949261725,
+        "classifier": 3732091507
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-05T17:05:44",
+      "seed_total_sec": 5962.841
+    }
+  ]
+}
