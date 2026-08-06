@@ -76,7 +76,7 @@ class LCKSVDLearner(DictLearner):
 
     def __init__(
             self,
-            dimensions: int = 1024,
+            dimensions: int = 256,
             max_iter: int = 10,
             tol: float = 1e-6,
             n_non_zero_coefs: int = 10,
