@@ -47,6 +47,10 @@ def _dict_learner_loaders():
         from dict_learners.fddl_gpu import FDDLGPU
         return FDDLGPU
 
+    def _csfddl_gpu():
+        from dict_learners.csfddl_gpu import CSFDDLGPU
+        return CSFDDLGPU
+
     def _aksvd():
         from dict_learners.aksvd import AKSVD
         return AKSVD
@@ -83,6 +87,7 @@ def _dict_learner_loaders():
 
     return {
         "FDDLGPU": _fddl_gpu,
+        "CSFDDLGPU": _csfddl_gpu,
         "AKSVD": _aksvd,
         "LCKSVDLearner": _lcksvd,
         "FrozenKSVDLearner": _frozen_ksvd,
