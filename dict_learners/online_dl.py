@@ -94,7 +94,7 @@ class OnlineDL(DictLearner):
 
     def __init__(
             self,
-            dimensions: int = 32,
+            dimensions: int = 64,
             alpha: float = 1.0,
             max_iter: int = 100,
             tol: float = 1e-6,
