@@ -1,0 +1,54 @@
+rows written        : 306  -> analysis\all_results.csv
+  source=mccv       : 272
+  source=artifact   : 32
+  source=missing    : 2
+combinations filled : 16 / 18
+combinations empty  : [('gspan_cork', 'bayesian'), ('gspan_cork', 'frozen_ksvd')]
+
+notes / skips / dedup decisions:
+SKIP  legacy metric schema   results/mc_cv_wl_fddl_gpu_nci_full_atoms32_20260712_215201_20260712_215201
+SKIP  unparsed dirname     results/mc_cv_wl_pca16_fddl_gpu_mutag_atoms32_20260726_123317_20260726_123345
+SKIP  unparsed dirname     results/mc_cv_wl_pca32_fddl_gpu_mutag_atoms32_20260726_122509_20260726_122528
+SKIP  unparsed dirname     results/mc_cv_wl_pca32_fddl_gpu_mutag_atoms32_20260726_123233_20260726_123301
+SKIP  no eval/results_*.txt  artifacts/wl_aksvd_nci_full_atoms128_20260729_234843_20260729_234953
+SKIP  no eval/results_*.txt  artifacts/wl_aksvd_nci_full_atoms32_20260715_121142_20260715_122758
+SKIP  no classifier blocks parsed artifacts/wl_aksvd_nci_full_atoms32_20260715_140826_20260715_140910
+SKIP  no classifier blocks parsed artifacts/wl_aksvd_nci_full_atoms350_20260715_141052_20260715_141151
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms1024_20260718_105241_20260718_105750
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms128_20260714_164523_20260714_165258
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms2048_20260718_153135_20260718_154324
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms2048_20260719_112514_20260719_120156
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms2048_20260723_192505_20260723_200151
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms256_20260714_165457_20260714_170831
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms256_20260715_104258_20260715_104409
+SKIP  no eval/results_*.txt  artifacts/wl_fddl_gpu_nci_full_atoms256_20260715_200732_20260715_200841
+SKIP  no eval/results_*.txt  artifacts/wl_fddl_gpu_nci_full_atoms256_20260715_201847_20260715_201856
+SKIP  no eval/results_*.txt  artifacts/wl_fddl_gpu_nci_full_atoms256_20260715_202129_20260715_202241
+SKIP  no eval/results_*.txt  artifacts/wl_fddl_gpu_nci_full_atoms256_20260715_204917_20260715_205027
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms256_20260719_110828_20260719_111127
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms256_20260725_141000_20260725_141301
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms3000_20260715_141958_20260715_154837
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms320_20260716_122558_20260716_122728
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms320_20260717_151253_20260717_151423
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms32_20260708_202033_20260708_202100
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms32_20260714_191415_20260714_191624
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms32_20260714_191918_20260714_192249
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms32_20260714_195034_20260714_195243
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms32_20260714_213846_20260714_213905
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms350_20260715_120235_20260715_120412
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms4096_20260719_123451_20260719_142411
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms512_20260718_103631_20260718_103855
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms512_20260719_111301_20260719_111906
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms64_20260714_163625_20260714_164118
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms64_20260719_110341_20260719_110445
+SKIP  no classifier blocks parsed artifacts/wl_fddl_gpu_nci_full_atoms64_20260719_110617_20260719_110721
+DEDUP dropped mc_cv_wl_fddl_gpu_nci_full_atoms32_20260707_214657 (n=2) in favour of mc_cv_wl_fddl_gpu_nci_full_atoms32_20260729_191847_20260729_192408 (n=5)
+DEDUP dropped mc_cv_wl_fddl_gpu_nci_full_atoms32_20260713_020606_20260713_022628 (n=5) in favour of mc_cv_wl_fddl_gpu_nci_full_atoms32_20260729_191847_20260729_192408 (n=5)
+DEDUP dropped mc_cv_wl_fddl_gpu_nci_full_atoms256_20260703_065900 (n=5) in favour of mc_cv_wl_fddl_gpu_nci_full_atoms256_20260728_215605_20260728_221140 (n=5)
+DEDUP dropped mc_cv_wl_fddl_gpu_nci_full_atoms512_20260703_233244 (n=5) in favour of mc_cv_wl_fddl_gpu_nci_full_atoms512_20260728_221425_20260728_224332 (n=5)
+DEDUP dropped mc_cv_wl_fddl_gpu_nci_full_atoms1024_20260713_025855_20260713_082859 (n=5) in favour of mc_cv_wl_fddl_gpu_nci_full_atoms1024_20260728_230212_20260729_000649 (n=5)
+DEDUP dropped mc_cv_wl_fddl_gpu_nci_full_atoms2048_20260713_142258_20260714_052612 (n=5) in favour of mc_cv_wl_fddl_gpu_nci_full_atoms2048_20260729_001755_20260729_031023 (n=5)
+DEDUP dropped mc_cv_wl_aksvd_nci_full_atoms128_20260731_121313_20260731_122429 (n=5) in favour of mc_cv_wl_aksvd_nci_full_atoms128_20260731_183729_20260731_184756 (n=5)
+DEDUP dropped mc_cv_wl_aksvd_nci_full_atoms256_20260731_124201_20260731_125439 (n=5) in favour of mc_cv_wl_aksvd_nci_full_atoms256_20260731_182338_20260731_183525 (n=5)
+DEDUP dropped mc_cv_wl_frozen_ksvd_nci_full_atoms128_20260801_230022_20260801_231105 (n=5) in favour of mc_cv_wl_frozen_ksvd_gpu_nci_full_atoms128_20260802_230147_20260802_230522 (n=5)
+DEDUP dropped mc_cv_fsm_fddl_gpu_nci_full_atoms1024_20260805_000329_20260805_003210 (n=2) in favour of mc_cv_fsm_fddl_gpu_nci_full_atoms1024_20260804_004359_20260804_015515 (n=5)
