@@ -9,3 +9,8 @@ cm/
 # needs the **/ prefix: a pattern with a slash is anchored to the repo root,
 # so plain "code_cache/sparse_codes.npz" never matched artifacts/<run>/code_cache/
 **/code_cache/sparse_codes.npz
+
+# wl_edge AK-SVD dictionaries: 136MB-2.1GB each, over GitHub's 100MB hard limit.
+# Smaller aksvd_dictionary.npy files (wl_aksvd, gspan_cork_aksvd) stay tracked,
+# so ignore only this run family rather than the filename everywhere.
+artifacts/wl_edge_aksvd_*/dict_learner/aksvd_dictionary.npy
