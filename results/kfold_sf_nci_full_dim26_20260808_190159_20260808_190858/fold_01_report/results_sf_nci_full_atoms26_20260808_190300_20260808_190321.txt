@@ -1,0 +1,153 @@
+Implementation  : sf
+Dataset         : nci_full
+Dictionary Atoms: 26
+Started At      : 20260808_190300
+Completed At    : 20260808_190321
+============================================================
+
+Reading the tables
+  Minority / Majority  the metric computed with that class as the
+                       positive class.
+  Macro                unweighted mean of the two class columns, so
+                       both classes count equally regardless of size.
+  Baseline             what a knowledge-free model scores in the Macro
+                       column: the best trivial constant classifier for
+                       Precision / Recall / F1 / Accuracy, and a random
+                       ranker for PR-AUC, ROC-AUC and MCC. Metrics whose
+                       floor differs by class are listed again per class
+                       under each model.
+  Accuracy             identical across all three columns by construction
+                       in a binary problem (one-vs-rest accuracy is the
+                       same for both classes); split for a uniform layout.
+  Recall               has no per-class floor — predicting a class
+                       everywhere forces its recall to 1.0 — so only the
+                       macro floor of 0.5 is meaningful.
+============================================================
+
+===== Logistic Regression (threshold=0.7073) =====
+
+                         Minority(+1)   Majority(-1)          Macro       Baseline
+Precision                      0.1667         0.9605         0.5636         0.5000
+Recall                         0.2126         0.9474         0.5800         0.5000
+F1                             0.1869         0.9539         0.5704         0.4879
+Accuracy                       0.9128         0.9128         0.9128         0.9529
+PR-AUC (AP)                    0.1237         0.9743         0.5490         0.5000
+Support                           174           3520           3694              -
+
+Symmetric (whole test set)
+ROC-AUC                        0.6744   (baseline 0.5000)
+MCC                            0.1427   (baseline 0.0000)
+
+Chance baseline by class
+                         Minority(+1)   Majority(-1)
+Precision                      0.0471         0.9529
+F1                             0.0900         0.9759
+PR-AUC (AP)                    0.0471         0.9529
+
+Confusion Matrix (whole dataset)
+[[3335  185]
+ [ 137   37]]
+
+Confusion Matrix (majority class = -1 vs rest)
+[[  37  137]
+ [ 185 3335]]
+
+Confusion Matrix (minority class = 1 vs rest)
+[[3335  185]
+ [ 137   37]]
+
+===== Gradient Boosting (threshold=0.6612) =====
+
+                         Minority(+1)   Majority(-1)          Macro       Baseline
+Precision                      0.2202         0.9669         0.5936         0.5000
+Recall                         0.3506         0.9386         0.6446         0.5000
+F1                             0.2705         0.9526         0.6115         0.4879
+Accuracy                       0.9109         0.9109         0.9109         0.9529
+PR-AUC (AP)                    0.2123         0.9809         0.5966         0.5000
+Support                           174           3520           3694              -
+
+Symmetric (whole test set)
+ROC-AUC                        0.7521   (baseline 0.5000)
+MCC                            0.2326   (baseline 0.0000)
+
+Chance baseline by class
+                         Minority(+1)   Majority(-1)
+Precision                      0.0471         0.9529
+F1                             0.0900         0.9759
+PR-AUC (AP)                    0.0471         0.9529
+
+Confusion Matrix (whole dataset)
+[[3304  216]
+ [ 113   61]]
+
+Confusion Matrix (majority class = -1 vs rest)
+[[  61  113]
+ [ 216 3304]]
+
+Confusion Matrix (minority class = 1 vs rest)
+[[3304  216]
+ [ 113   61]]
+
+===== Linear SVM (threshold=0.1006) =====
+
+                         Minority(+1)   Majority(-1)          Macro       Baseline
+Precision                      0.1643         0.9601         0.5622         0.5000
+Recall                         0.2011         0.9494         0.5753         0.5000
+F1                             0.1809         0.9547         0.5678         0.4879
+Accuracy                       0.9142         0.9142         0.9142         0.9529
+PR-AUC (AP)                    0.1190         0.9742         0.5466         0.5000
+Support                           174           3520           3694              -
+
+Symmetric (whole test set)
+ROC-AUC                        0.6739   (baseline 0.5000)
+MCC                            0.1369   (baseline 0.0000)
+
+Chance baseline by class
+                         Minority(+1)   Majority(-1)
+Precision                      0.0471         0.9529
+F1                             0.0900         0.9759
+PR-AUC (AP)                    0.0471         0.9529
+
+Confusion Matrix (whole dataset)
+[[3342  178]
+ [ 139   35]]
+
+Confusion Matrix (majority class = -1 vs rest)
+[[  35  139]
+ [ 178 3342]]
+
+Confusion Matrix (minority class = 1 vs rest)
+[[3342  178]
+ [ 139   35]]
+
+===== Random Forest (threshold=0.2700) =====
+
+                         Minority(+1)   Majority(-1)          Macro       Baseline
+Precision                      0.3668         0.9740         0.6704         0.5000
+Recall                         0.4828         0.9588         0.7208         0.5000
+F1                             0.4169         0.9664         0.6916         0.4879
+Accuracy                       0.9364         0.9364         0.9364         0.9529
+PR-AUC (AP)                    0.3603         0.9869         0.6736         0.5000
+Support                           174           3520           3694              -
+
+Symmetric (whole test set)
+ROC-AUC                        0.8332   (baseline 0.5000)
+MCC                            0.3879   (baseline 0.0000)
+
+Chance baseline by class
+                         Minority(+1)   Majority(-1)
+Precision                      0.0471         0.9529
+F1                             0.0900         0.9759
+PR-AUC (AP)                    0.0471         0.9529
+
+Confusion Matrix (whole dataset)
+[[3375  145]
+ [  90   84]]
+
+Confusion Matrix (majority class = -1 vs rest)
+[[  84   90]
+ [ 145 3375]]
+
+Confusion Matrix (minority class = 1 vs rest)
+[[3375  145]
+ [  90   84]]
