@@ -1,0 +1,89 @@
+{
+  "implementation": "fsm_csfddl_gpu",
+  "dataset": "nci_full",
+  "started_at": "20260808_081541",
+  "planned_seeds": [
+    19,
+    84
+  ],
+  "n_planned_seeds": 2,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "completed_seeds": [
+    19,
+    84
+  ],
+  "n_completed_seeds": 2,
+  "missing_seeds": [],
+  "selected_features_summary": {
+    "per_seed": {
+      "19": 468,
+      "84": 470
+    },
+    "mean": 469.0,
+    "std_ddof1": 1.41,
+    "min": 468,
+    "max": 470,
+    "n": 2
+  },
+  "updated_at": "2026-08-08T08:35:11",
+  "total_atoms": 512,
+  "failed_seeds": [],
+  "ended_at": "20260808_083511",
+  "runs": [
+    {
+      "master_seed": 19,
+      "n_selected_features": 468,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 512,
+      "encoder_class": "FSM",
+      "dict_learner_class": "CSFDDLGPU",
+      "derived_seeds": {
+        "split": 1373742719,
+        "encoder": 3755165573,
+        "dict_learner": 1273371206,
+        "classifier": 3859852215
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-08T08:19:50",
+      "seed_total_sec": 584.494
+    },
+    {
+      "master_seed": 84,
+      "n_selected_features": 470,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 512,
+      "encoder_class": "FSM",
+      "dict_learner_class": "CSFDDLGPU",
+      "derived_seeds": {
+        "split": 960856117,
+        "encoder": 4251960576,
+        "dict_learner": 3909561870,
+        "classifier": 3002144987
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-08T08:29:37",
+      "seed_total_sec": 578.002
+    }
+  ]
+}

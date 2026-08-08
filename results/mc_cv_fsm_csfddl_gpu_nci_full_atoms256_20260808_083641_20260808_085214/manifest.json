@@ -1,0 +1,89 @@
+{
+  "implementation": "fsm_csfddl_gpu",
+  "dataset": "nci_full",
+  "started_at": "20260808_083641",
+  "planned_seeds": [
+    2,
+    34
+  ],
+  "n_planned_seeds": 2,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "completed_seeds": [
+    2,
+    34
+  ],
+  "n_completed_seeds": 2,
+  "missing_seeds": [],
+  "selected_features_summary": {
+    "per_seed": {
+      "2": 460,
+      "34": 467
+    },
+    "mean": 463.5,
+    "std_ddof1": 4.95,
+    "min": 460,
+    "max": 467,
+    "n": 2
+  },
+  "updated_at": "2026-08-08T08:52:14",
+  "total_atoms": 256,
+  "failed_seeds": [],
+  "ended_at": "20260808_085214",
+  "runs": [
+    {
+      "master_seed": 2,
+      "n_selected_features": 460,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 256,
+      "encoder_class": "FSM",
+      "dict_learner_class": "CSFDDLGPU",
+      "derived_seeds": {
+        "split": 2834126987,
+        "encoder": 2358157858,
+        "dict_learner": 1860244682,
+        "classifier": 1437227251
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-08T08:40:03",
+      "seed_total_sec": 463.888
+    },
+    {
+      "master_seed": 34,
+      "n_selected_features": 467,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 256,
+      "encoder_class": "FSM",
+      "dict_learner_class": "CSFDDLGPU",
+      "derived_seeds": {
+        "split": 2378112021,
+        "encoder": 3681946355,
+        "dict_learner": 4069573452,
+        "classifier": 248712534
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-08T08:47:50",
+      "seed_total_sec": 460.653
+    }
+  ]
+}

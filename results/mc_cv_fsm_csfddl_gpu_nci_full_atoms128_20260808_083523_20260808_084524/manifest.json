@@ -1,0 +1,89 @@
+{
+  "implementation": "fsm_csfddl_gpu",
+  "dataset": "nci_full",
+  "started_at": "20260808_083523",
+  "planned_seeds": [
+    54,
+    39
+  ],
+  "n_planned_seeds": 2,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "completed_seeds": [
+    39,
+    54
+  ],
+  "n_completed_seeds": 2,
+  "missing_seeds": [],
+  "selected_features_summary": {
+    "per_seed": {
+      "39": 463,
+      "54": 478
+    },
+    "mean": 470.5,
+    "std_ddof1": 10.61,
+    "min": 463,
+    "max": 478,
+    "n": 2
+  },
+  "updated_at": "2026-08-08T08:45:24",
+  "total_atoms": 128,
+  "failed_seeds": [],
+  "ended_at": "20260808_084524",
+  "runs": [
+    {
+      "master_seed": 39,
+      "n_selected_features": 463,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 128,
+      "encoder_class": "FSM",
+      "dict_learner_class": "CSFDDLGPU",
+      "derived_seeds": {
+        "split": 148300281,
+        "encoder": 2998581603,
+        "dict_learner": 2983090328,
+        "classifier": 3741398857
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-08T08:42:32",
+      "seed_total_sec": 298.031
+    },
+    {
+      "master_seed": 54,
+      "n_selected_features": 478,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 128,
+      "encoder_class": "FSM",
+      "dict_learner_class": "CSFDDLGPU",
+      "derived_seeds": {
+        "split": 3871718627,
+        "encoder": 3515227184,
+        "dict_learner": 164883562,
+        "classifier": 1133932282
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-08T08:37:34",
+      "seed_total_sec": 296.323
+    }
+  ]
+}

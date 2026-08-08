@@ -91,8 +91,8 @@ class FrozenKSVDLearnerGPU(DictLearner):
 
     def __init__(
             self,
-            n_components_base: int = 96,
-            n_components_residual: int = 32,
+            n_components_base: int = 192,
+            n_components_residual: int = 64,
             max_iter: int = 10,
             tol: float = 1e-6,
             n_non_zero_coefs: int = 10,

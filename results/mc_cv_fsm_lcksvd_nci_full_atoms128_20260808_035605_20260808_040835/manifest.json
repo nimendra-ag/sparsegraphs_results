@@ -1,0 +1,89 @@
+{
+  "implementation": "fsm_lcksvd",
+  "dataset": "nci_full",
+  "started_at": "20260808_035605",
+  "planned_seeds": [
+    59,
+    17
+  ],
+  "n_planned_seeds": 2,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "completed_seeds": [
+    17,
+    59
+  ],
+  "n_completed_seeds": 2,
+  "missing_seeds": [],
+  "selected_features_summary": {
+    "per_seed": {
+      "17": 451,
+      "59": 449
+    },
+    "mean": 450.0,
+    "std_ddof1": 1.41,
+    "min": 449,
+    "max": 451,
+    "n": 2
+  },
+  "updated_at": "2026-08-08T04:08:35",
+  "total_atoms": 128,
+  "failed_seeds": [],
+  "ended_at": "20260808_040835",
+  "runs": [
+    {
+      "master_seed": 17,
+      "n_selected_features": 451,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 128,
+      "encoder_class": "FSM",
+      "dict_learner_class": "LCKSVDLearner",
+      "derived_seeds": {
+        "split": 481830384,
+        "encoder": 331279163,
+        "dict_learner": 981985333,
+        "classifier": 3085826624
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-08T04:05:52",
+      "seed_total_sec": 372.488
+    },
+    {
+      "master_seed": 59,
+      "n_selected_features": 449,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 128,
+      "encoder_class": "FSM",
+      "dict_learner_class": "LCKSVDLearner",
+      "derived_seeds": {
+        "split": 3421984349,
+        "encoder": 2025664988,
+        "dict_learner": 1662857780,
+        "classifier": 1175529237
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-08T03:59:39",
+      "seed_total_sec": 371.289
+    }
+  ]
+}

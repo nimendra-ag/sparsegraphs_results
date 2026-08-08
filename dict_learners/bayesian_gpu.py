@@ -86,7 +86,7 @@ class BayesianDLGPU(DictLearner):
     def __init__(
             self,
             dimensions: int = 32,
-            n_iter: int = 10,
+            n_iter: int = 20,
             n_infer_iter: int = 50,
             n_burnin: int = 20,
             n_collect: int = 10,

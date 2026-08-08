@@ -27,7 +27,7 @@ class CSFDDLGPU(DictLearner):
 
     def __init__(
             self,
-            k: int = 2048,
+            k: int = 128,
             lambda1: float = 0.1,
             lambda2: float = 0.1,
             eta: float = 1.0,

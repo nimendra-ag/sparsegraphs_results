@@ -1,0 +1,89 @@
+{
+  "implementation": "fsm_csfddl_gpu",
+  "dataset": "nci_full",
+  "started_at": "20260808_081347",
+  "planned_seeds": [
+    38,
+    15
+  ],
+  "n_planned_seeds": 2,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "completed_seeds": [
+    15,
+    38
+  ],
+  "n_completed_seeds": 2,
+  "missing_seeds": [],
+  "selected_features_summary": {
+    "per_seed": {
+      "15": 476,
+      "38": 447
+    },
+    "mean": 461.5,
+    "std_ddof1": 20.51,
+    "min": 447,
+    "max": 476,
+    "n": 2
+  },
+  "updated_at": "2026-08-08T08:41:24",
+  "total_atoms": 1024,
+  "failed_seeds": [],
+  "ended_at": "20260808_084124",
+  "runs": [
+    {
+      "master_seed": 15,
+      "n_selected_features": 476,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 1024,
+      "encoder_class": "FSM",
+      "dict_learner_class": "CSFDDLGPU",
+      "derived_seeds": {
+        "split": 3285388380,
+        "encoder": 1594602895,
+        "dict_learner": 200598632,
+        "classifier": 1262585352
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-08T08:33:30",
+      "seed_total_sec": 830.982
+    },
+    {
+      "master_seed": 38,
+      "n_selected_features": 447,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 1024,
+      "encoder_class": "FSM",
+      "dict_learner_class": "CSFDDLGPU",
+      "derived_seeds": {
+        "split": 3728617767,
+        "encoder": 1144453095,
+        "dict_learner": 962431537,
+        "classifier": 218401432
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-08T08:19:39",
+      "seed_total_sec": 817.665
+    }
+  ]
+}

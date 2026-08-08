@@ -1,0 +1,89 @@
+{
+  "implementation": "fsm_csfddl_gpu",
+  "dataset": "nci_full",
+  "started_at": "20260808_085220",
+  "planned_seeds": [
+    56,
+    87
+  ],
+  "n_planned_seeds": 2,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "completed_seeds": [
+    56,
+    87
+  ],
+  "n_completed_seeds": 2,
+  "missing_seeds": [],
+  "selected_features_summary": {
+    "per_seed": {
+      "56": 484,
+      "87": 447
+    },
+    "mean": 465.5,
+    "std_ddof1": 26.16,
+    "min": 447,
+    "max": 484,
+    "n": 2
+  },
+  "updated_at": "2026-08-08T09:01:12",
+  "total_atoms": 32,
+  "failed_seeds": [],
+  "ended_at": "20260808_090112",
+  "runs": [
+    {
+      "master_seed": 56,
+      "n_selected_features": 484,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 32,
+      "encoder_class": "FSM",
+      "dict_learner_class": "CSFDDLGPU",
+      "derived_seeds": {
+        "split": 2148111748,
+        "encoder": 349989916,
+        "dict_learner": 3879539401,
+        "classifier": 2433805232
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-08T08:54:21",
+      "seed_total_sec": 267.717
+    },
+    {
+      "master_seed": 87,
+      "n_selected_features": 447,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 32,
+      "encoder_class": "FSM",
+      "dict_learner_class": "CSFDDLGPU",
+      "derived_seeds": {
+        "split": 129092521,
+        "encoder": 4223401288,
+        "dict_learner": 4061052280,
+        "classifier": 295076379
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-08T08:58:49",
+      "seed_total_sec": 257.97
+    }
+  ]
+}
