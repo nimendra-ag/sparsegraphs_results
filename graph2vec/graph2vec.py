@@ -1,12 +1,102 @@
-import numpy as np
+import hashlib
+import random
+from typing import Dict, List
+
 import networkx as nx
-from typing import List
-from estimator import Estimator
+import numpy as np
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
-from treefeatures import WeisfeilerLehmanHashing
 
 
-class Graph2Vec(Estimator):
+class WeisfeilerLehmanHashing(object):
+    """Weisfeiler-Lehman feature extractor.
+
+    Vendored alongside Graph2Vec (rather than imported from karateclub) so this
+    module is self-contained, exactly as sf/sf.py is for SF.
+
+    Args:
+        graph (NetworkX graph): NetworkX graph for which we do WL hashing.
+        wl_iterations (int): Number of WL iterations.
+        attributed (bool): Presence of attributes.
+        erase_base_features (bool): Deleting the base features.
+    """
+
+    def __init__(
+        self,
+        graph: nx.classes.graph.Graph,
+        wl_iterations: int,
+        attributed: bool,
+        erase_base_features: bool,
+    ):
+        self.wl_iterations = wl_iterations
+        self.graph = graph
+        self.features = None
+        self.extracted_features = None
+        self.attributed = attributed
+        self.erase_base_features = erase_base_features
+        self._set_features()
+        self._do_recursions()
+
+    def _set_features(self):
+        """Creating the base features.
+
+        With `attributed=True` the node's "feature" attribute is used as the
+        iteration-0 label — which is the atom symbol written by
+        utils.graph_data._mol_to_graph — otherwise WL falls back to degree.
+        """
+        if self.attributed:
+            self.features = nx.get_node_attributes(self.graph, "feature")
+        else:
+            self.features = {
+                node: self.graph.degree(node) for node in self.graph.nodes()
+            }
+        self.extracted_features = {k: [str(v)] for k, v in self.features.items()}
+
+    def _erase_base_features(self):
+        """Erasing the base features."""
+        for k in self.extracted_features:
+            del self.extracted_features[k][0]
+
+    def _do_a_recursion(self) -> Dict[int, str]:
+        """The method does a single WL recursion.
+
+        Return types:
+            * **new_features** *(dict of strings)* - The hash table with extracted WL features.
+        """
+        new_features = {}
+        for node in self.graph.nodes():
+            nebs = self.graph.neighbors(node)
+            degs = [self.features[neb] for neb in nebs]
+            features = [str(self.features[node])] + sorted(str(deg) for deg in degs)
+            features = "_".join(features)
+            # md5 rather than the builtin hash(), so the subtree identifiers are
+            # stable across processes without a PYTHONHASHSEED caveat.
+            new_features[node] = hashlib.md5(features.encode()).hexdigest()
+        self.extracted_features = {
+            k: self.extracted_features[k] + [v] for k, v in new_features.items()
+        }
+        return new_features
+
+    def _do_recursions(self):
+        """The method does a series of WL recursions."""
+        for _ in range(self.wl_iterations):
+            self.features = self._do_a_recursion()
+        if self.erase_base_features:
+            self._erase_base_features()
+
+    def get_node_features(self) -> Dict[int, List[str]]:
+        """Return the node level features."""
+        return self.extracted_features
+
+    def get_graph_features(self) -> List[str]:
+        """Return the graph level features."""
+        return [
+            feature
+            for _, features in self.extracted_features.items()
+            for feature in features
+        ]
+
+
+class Graph2Vec():
     r"""An implementation of `"Graph2Vec" <https://arxiv.org/abs/1707.05005>`_
     from the MLGWorkshop '17 paper "Graph2Vec: Learning Distributed Representations of Graphs".
     The procedure creates Weisfeiler-Lehman tree features for nodes in graphs. Using
@@ -43,7 +133,6 @@ class Graph2Vec(Estimator):
         seed: int = 42,
         erase_base_features: bool = False,
     ):
-
         self.wl_iterations = wl_iterations
         self.attributed = attributed
         self.dimensions = dimensions
@@ -55,9 +144,55 @@ class Graph2Vec(Estimator):
         self.seed = seed
         self.erase_base_features = erase_base_features
 
-    def fit(self, graphs: List[nx.classes.graph.Graph]):
+    def _wl_documents(self, graphs: List[nx.classes.graph.Graph]) -> List[List[str]]:
+        """Turn each graph into its bag of WL subtree identifiers.
+
+        Shared by fit() and infer() so the training corpus and the inferred
+        documents can never be built two different ways.
         """
-        Fitting a Graph2Vec model.
+        return [
+            WeisfeilerLehmanHashing(
+                graph, self.wl_iterations, self.attributed, self.erase_base_features
+            ).get_graph_features()
+            for graph in graphs
+        ]
+
+    def _set_seed(self):
+        """Creating the initial random seed."""
+        random.seed(self.seed)
+        np.random.seed(self.seed)
+
+    @staticmethod
+    def _ensure_integrity(graph: nx.classes.graph.Graph) -> nx.classes.graph.Graph:
+        """Ensure walk traversal conditions."""
+        edge_list = [(index, index) for index in range(graph.number_of_nodes())]
+        graph.add_edges_from(edge_list)
+
+        return graph
+
+    @staticmethod
+    def _check_indexing(graph: nx.classes.graph.Graph):
+        """Checking the consecutive numeric indexing."""
+        numeric_indices = [index for index in range(graph.number_of_nodes())]
+        node_indices = sorted([node for node in graph.nodes()])
+
+        assert numeric_indices == node_indices, "The node indexing is wrong."
+
+    def _check_graph(self, graph: nx.classes.graph.Graph) -> nx.classes.graph.Graph:
+        """Check the Karate Club assumptions about the graph."""
+        self._check_indexing(graph)
+        graph = self._ensure_integrity(graph)
+
+        return graph
+
+    def _check_graphs(self, graphs: List[nx.classes.graph.Graph]):
+        """Check the Karate Club assumptions for a list of graphs."""
+        graphs = [self._check_graph(graph) for graph in graphs]
+
+        return graphs
+
+    def fit(self, graphs: List[nx.classes.graph.Graph]):
+        """Fitting a Graph2Vec model.
 
         Arg types:
             * **graphs** *(List of NetworkX graphs)* - The graphs to be embedded.
@@ -65,14 +200,8 @@ class Graph2Vec(Estimator):
         self._set_seed()
         graphs = self._check_graphs(graphs)
         documents = [
-            WeisfeilerLehmanHashing(
-                graph, self.wl_iterations, self.attributed, self.erase_base_features
-            )
-            for graph in graphs
-        ]
-        documents = [
-            TaggedDocument(words=doc.get_graph_features(), tags=[str(i)])
-            for i, doc in enumerate(documents)
+            TaggedDocument(words=features, tags=[str(i)])
+            for i, features in enumerate(self._wl_documents(graphs))
         ]
 
         self.model = Doc2Vec(
@@ -88,7 +217,9 @@ class Graph2Vec(Estimator):
             seed=self.seed,
         )
 
-        self._embedding = [self.model.docvecs[str(i)] for i, _ in enumerate(documents)]
+        # `.dv` is gensim >= 4.0's name for what used to be `.docvecs`
+        # (requirements.txt pins gensim 4.4.0, where `.docvecs` is gone).
+        self._embedding = [self.model.dv[str(i)] for i, _ in enumerate(documents)]
 
     def get_embedding(self) -> np.array:
         r"""Getting the embedding of graphs.
@@ -100,7 +231,7 @@ class Graph2Vec(Estimator):
 
     def infer(self, graphs) -> np.array:
         """Infer the graph embeddings.
-    
+
         Arg types:
             * **graphs** *(List of NetworkX graphs)* - The graphs to be embedded.
 
@@ -109,21 +240,15 @@ class Graph2Vec(Estimator):
         """
         self._set_seed()
         graphs = self._check_graphs(graphs)
-        documents = [
-            WeisfeilerLehmanHashing(
-                graph, self.wl_iterations, self.attributed, self.erase_base_features
-            )
-            for graph in graphs
-        ]
-
-        documents = [doc.get_graph_features() for _, doc in enumerate(documents)]
-
         embedding = np.array(
             [
                 self.model.infer_vector(
-                    doc, alpha=self.learning_rate, min_alpha=0.00001, epochs=self.epochs
+                    document,
+                    alpha=self.learning_rate,
+                    min_alpha=0.00001,
+                    epochs=self.epochs,
                 )
-                for doc in documents
+                for document in self._wl_documents(graphs)
             ]
         )
 

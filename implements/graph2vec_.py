@@ -1,168 +1,167 @@
-"""
-Evaluate karateclub's Graph2Vec on the NCI1 dataset.
+"""Evaluate graph2vec on NCI1 as a non-dictionary baseline.
 
-- 70/30 stratified train/test split
-- Evaluation via the project's Evaluator class (LinearSVC, LR, RF, GB)
-- Embedding dimension = 1024
+Single training pass on ONE fixed 70/30 stratified split. graph2vec has no
+dictionary stage — it learns a whole-corpus Doc2Vec embedding over WL subtree
+identifiers — so unlike wl_fddl_gpu / fsm_aksvd this arm does not go through
+utils.export.export_pipeline and exports no deployable bundle. What it shares
+with every other arm is the *reporting*: the same utils.evaluator.Evaluator, the
+same four classifiers in the same order, and the same
+results/<impl>_<dataset>_atoms<D>_<start>_<end>/ run folder holding the metric
+tables and the three confusion-matrix images per model.
+
+`n_atoms` in the report header is the embedding width (δ), which is what the
+classifiers actually see — the same convention implements/sf_test.py uses for
+the SF baseline's spectrum width.
+
+CAVEATS
+  * The 70/30 split has no validation slice, so each model's decision threshold
+    is tuned on the test labels. The dictionary arms and sf_test.py instead tune
+    on a held-out val split and reuse that threshold on test. These numbers are
+    therefore optimistic relative to the MC-CV / k-fold arms and are not
+    directly comparable to them.
+  * graph2vec is transductive here: the embedding is fitted on ALL graphs
+    before the split, so test graphs contribute to the Doc2Vec corpus. This is
+    how the original graph2vec evaluation is set up, and it is why the encoder
+    is fitted once outside the split rather than per-fold.
+  * The embedding is dense and roughly zero-centred, so it is standardised with
+    StandardScaler rather than the MaxAbsScaler the sparse-code arms use.
+
+Usage
+-----
+    python implements/graph2vec_.py                        # defaults below
+    python implements/graph2vec_.py --dim 128 --epochs 50
 """
+
+import sys
+import os
+# Add the project root to the sys.path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import argparse
-import inspect
-import logging
-import os
-import sys
 import time
+from datetime import datetime
 
-import networkx as nx
 import numpy as np
-from graph2vec import Graph2Vec
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-sys.path.insert(0, ".")
-from utils.graph_data import GraphDataLoader
 from utils.evaluator import Evaluator
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
-    datefmt="%H:%M:%S",
-)
-logger = logging.getLogger("run_graph2vec")
+from utils.graph_data import GraphDataLoader
+from utils.seeding import seed_everything
+from graph2vec.graph2vec import Graph2Vec
 
 
-def _supports_node_attribute() -> bool:
-    """Check if installed karateclub version supports use_node_attribute."""
-    sig = inspect.signature(Graph2Vec.__init__)
-    return "use_node_attribute" in sig.parameters
+DATASET = "nci_full"
+IMPLEMENTATION = "graph2vec"
+
+# Seed for the graph2vec embedding, the train/test split and the classifiers.
+MODEL_SEED = 42
+# Fraction of the corpus held out for the final evaluation.
+TEST_SIZE = 0.5
+
+# graph2vec hyper-parameters. Exposed as CLI flags so a sweep does not need a
+# code edit; the constants are the defaults every reported run used.
+DIMENSIONS = 1024      # embedding width (delta)
+WL_ITERATIONS = 2      # WL iteration depth (D)
+EPOCHS = 100           # Doc2Vec training epochs
+LEARNING_RATE = 0.025  # HogWild! learning rate (alpha)
+MIN_COUNT = 1          # minimum subgraph frequency to keep a WL feature
+WORKERS = 4            # gensim worker threads
+
+# The NCI loader writes the atom symbol to each node's "feature" attribute, so
+# WL hashing starts from atom identity rather than falling back to degree.
+ATTRIBUTED = True
 
 
-def _encode_node_features(graphs: list[nx.Graph], attr: str = "feature") -> list[nx.Graph]:
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="graph2vec baseline on NCI1")
+    p.add_argument("--dim", type=int, default=DIMENSIONS,
+                   help="Embedding dimension (delta)")
+    p.add_argument("--wl-depth", type=int, default=WL_ITERATIONS,
+                   help="WL iteration depth (D)")
+    p.add_argument("--epochs", type=int, default=EPOCHS,
+                   help="Doc2Vec training epochs")
+    p.add_argument("--learning-rate", type=float, default=LEARNING_RATE,
+                   help="HogWild! learning rate (alpha)")
+    p.add_argument("--min-count", type=int, default=MIN_COUNT,
+                   help="Minimum WL subgraph frequency")
+    p.add_argument("--workers", type=int, default=WORKERS,
+                   help="Gensim worker threads")
+    p.add_argument("--seed", type=int, default=MODEL_SEED, help="Random seed")
+    return p.parse_args()
+
+
+def build_embeddings(graphs, args):
+    """Embed every graph with graph2vec. Returns (X, dimensions).
+
+    The whole corpus is embedded in one pass (see the transductive caveat in the
+    module docstring), so this runs once before the split rather than per-split.
     """
-    Fallback for older karateclub versions that lack `use_node_attribute`.
-    Encodes string node features into integer 'label' attributes.
-    """
-    label_map: dict[str, int] = {}
-    processed = []
-
-    for g in graphs:
-        g_copy = g.copy()
-        for node in g_copy.nodes():
-            feat = str(g_copy.nodes[node].get(attr, g_copy.degree(node)))
-            if feat not in label_map:
-                label_map[feat] = len(label_map)
-            g_copy.nodes[node]["label"] = label_map[feat]
-        processed.append(g_copy)
-
-    logger.info("Encoded %d distinct node features into integer labels", len(label_map))
-    return processed
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser(description="graph2vec on NCI1")
-    parser.add_argument("--dim", type=int, default=1024, help="Embedding dimension (δ)")
-    parser.add_argument("--wl-depth", type=int, default=2, help="WL iteration depth (D)")
-    parser.add_argument("--epochs", type=int, default=100, help="Training epochs (ε)")
-    parser.add_argument("--lr", type=float, default=0.025, help="Learning rate (α)")
-    parser.add_argument("--min-count", type=int, default=1, help="Min subgraph frequency")
-    parser.add_argument("--workers", type=int, default=4, help="Gensim worker threads")
-    parser.add_argument("--seed", type=int, default=42, help="Random seed")
-    args = parser.parse_args()
-
-    # ---- Load NCI1 -------------------------------------------------------
-    logger.info("Loading NCI1 dataset…")
-    loader = GraphDataLoader()
-    graphs, labels = loader.nci_full_graphs, loader.nci_full_labels
-    labels = np.array(labels)
-    logger.info("Loaded %d graphs, %d classes", len(graphs), len(set(labels)))
-
-    # ---- Handle node features across karateclub versions -----------------
-    use_attr = _supports_node_attribute()
-
-    if use_attr:
-        logger.info("karateclub supports use_node_attribute — using 'feature' directly")
-        model = Graph2Vec(
-            wl_iterations=args.wl_depth,
-            use_node_attribute="feature",
-            dimensions=args.dim,
-            epochs=args.epochs,
-            learning_rate=args.lr,
-            min_count=args.min_count,
-            workers=args.workers,
-            seed=args.seed,
-        )
-    else:
-        logger.info(
-            "karateclub lacks use_node_attribute — encoding features into 'label' attr"
-        )
-        graphs = _encode_node_features(graphs, attr="feature")
-        model = Graph2Vec(
-            wl_iterations=args.wl_depth,
-            attributed=True,
-            dimensions=args.dim,
-            epochs=args.epochs,
-            learning_rate=args.lr,
-            min_count=args.min_count,
-            workers=args.workers,
-            seed=args.seed,
-        )
-
-    # ---- Train graph2vec -------------------------------------------------
-    logger.info(
-        "Training graph2vec — dim=%d, wl_depth=%d, epochs=%d",
-        args.dim, args.wl_depth, args.epochs,
+    print(f"Fitting graph2vec | dim={args.dim} wl_depth={args.wl_depth} "
+          f"epochs={args.epochs} min_count={args.min_count}")
+    model = Graph2Vec(
+        wl_iterations=args.wl_depth,
+        attributed=ATTRIBUTED,
+        dimensions=args.dim,
+        epochs=args.epochs,
+        learning_rate=args.learning_rate,
+        min_count=args.min_count,
+        workers=args.workers,
+        seed=args.seed,
     )
+
     t0 = time.perf_counter()
     model.fit(graphs)
-    pre_training_time = time.perf_counter() - t0
-    logger.info("Pre-training completed in %.1f s", pre_training_time)
+    print(f"Pre-training completed in {time.perf_counter() - t0:.1f}s")
 
-    embeddings = model.get_embedding()
-    logger.info("Embedding shape: %s", embeddings.shape)
+    X = model.get_embedding()
 
-    # ---- 70/30 stratified split ------------------------------------------
-    X_train, X_test, y_train, y_test = train_test_split(
-        embeddings, labels, test_size=0.3, random_state=args.seed, stratify=labels,
+    # The width reported in folder names / report headers is the width the
+    # classifiers actually see, so assert the two cannot drift apart.
+    print(f"graph2vec embedding matrix shape (n_graphs, n_features): {X.shape}")
+    print(f"Requested delta = {args.dim} | actual feature count = {X.shape[1]}")
+    assert X.shape[1] == args.dim, (
+        f"graph2vec embedding width {X.shape[1]} != requested dimension {args.dim}"
     )
 
+    return X, args.dim
+
+
+def main():
+    args = parse_args()
+    started_at = datetime.now().strftime("%Y%m%d_%H%M%S")
+    total_t0 = time.perf_counter()
+
+    seed_everything(args.seed)
+    graphs, y = GraphDataLoader().load(DATASET)
+    y = np.array(y)
+
+    X, dimensions = build_embeddings(graphs, args)
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=TEST_SIZE, random_state=args.seed, stratify=y,
+    )
+
+    # Dense, roughly zero-centred embedding -> standardise rather than MaxAbs.
     scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
+    X_train_s = scaler.fit_transform(X_train)
+    X_test_s = scaler.transform(X_test)
+    print(f"Split sizes | train={len(X_train_s)} test={len(X_test_s)}")
 
-    logger.info("Train: %d, Test: %d", len(X_train), len(X_test))
+    # Same evaluator, same four models, same order as utils/export.py and
+    # implements/sf_test.py, so the saved report is drop-in comparable.
+    evaluator = Evaluator(
+        X_train_s, y_train, X_test_s, y_test,
+        implementation=IMPLEMENTATION, dataset=DATASET,
+        n_atoms=dimensions, random_state=args.seed, started_at=started_at,
+    )
+    evaluator.predict_logistic_regression()
+    evaluator.predict_gradient_boosting()
+    evaluator.predict_svm()
+    evaluator.predict_random_forest()
 
-    # ---- Evaluate using project Evaluator --------------------------------
-    os.makedirs("./cm", exist_ok=True)
-
-    evaluator = Evaluator(X_train, y_train, X_test, y_test, random_state=args.seed)
-
-    results = {}
-    results["Linear SVM"] = evaluator.predict_svm()
-    results["Logistic Regression"] = evaluator.predict_logistic_regression()
-    results["Random Forest"] = evaluator.predict_random_forest()
-    results["Gradient Boosting"] = evaluator.predict_gradient_boosting()
-
-    # ---- Summary ---------------------------------------------------------
-    logger.info("=" * 60)
-    logger.info("NCI1 — graph2vec results (dim=%d, wl=%d, epochs=%d)",
-                args.dim, args.wl_depth, args.epochs)
-    logger.info("-" * 60)
-    logger.info("%-22s %8s %8s %8s %8s %8s",
-                "Model", "Prec", "Rec", "F1", "ROC-AUC", "PR-AUC")
-    logger.info("-" * 60)
-    for model_name, metrics in results.items():
-        logger.info(
-            "%-22s %8.4f %8.4f %8.4f %8.4f %8.4f",
-            model_name,
-            metrics["Precision"],
-            metrics["Recall"],
-            metrics["F1-Score"],
-            metrics["ROC-AUC"],
-            metrics["PR-AUC"],
-        )
-    logger.info("-" * 60)
-    logger.info("Pre-training time: %.1f s", pre_training_time)
-    logger.info("=" * 60)
+    run_folder = evaluator.save_report()
+    print(f"\nRun complete in {time.perf_counter() - total_t0:.1f}s -> {run_folder}")
 
 
 if __name__ == "__main__":
