@@ -484,10 +484,10 @@ def s6(df, clf="RandomForest", metric="macro_f1"):
                               markerfacecolor="none", markeredgecolor=SHADE,
                               label="cheapest and best of the timed runs"))
 
-    # Labels sit above their point, so the topmost one needs somewhere to go
-    # that is not the title.
+    # Headroom above for the topmost label (which would otherwise hit the
+    # title), and below for the legend (which would otherwise sit on a point).
     lo, hi = ax.get_ylim()
-    ax.set_ylim(lo, hi + (hi - lo) * 0.13)
+    ax.set_ylim(lo - (hi - lo) * 0.16, hi + (hi - lo) * 0.13)
 
     repel(ax, [(r["fit_seconds"], r[metric], f"{r['dict_learner']}\n{int(r['atoms'])}", "black")
                for _, r in pts.iterrows()])
@@ -528,23 +528,32 @@ def s7(df, metric="macro_f1", top=20):
     ax.grid(axis="y", visible=False)
 
     lead, runner = d.iloc[-1], d.iloc[-2]
-    ax.legend(handles=[
+    handles = [
         Line2D([], [], color=TAB10[0], marker="o", markersize=7, linestyle="none",
                markeredgecolor="black", markeredgewidth=0.6,
                label="MC-CV mean   (bar = \u00b11 SD)"),
-        Line2D([], [], color=TAB10[1], marker="o", markersize=7, linestyle="none",
-               markeredgecolor="black", markeredgewidth=0.6,
-               label="single split   (no spread available)"),
-    ], loc="lower right", fontsize=8, framealpha=0.9)
+    ]
+    # Only advertise the single-split colour when one actually made the cut.
+    if (d["source"] == "artifact").any():
+        handles.append(
+            Line2D([], [], color=TAB10[1], marker="o", markersize=7, linestyle="none",
+                   markeredgecolor="black", markeredgewidth=0.6,
+                   label="single split   (no spread available)"))
+    ax.legend(handles=handles, loc="lower right", fontsize=8, framealpha=0.9)
+    def pm(row):
+        # A single-split row carries no spread; say so rather than printing nan.
+        s = row.get(f"{metric}_std", np.nan)
+        return f"{row[metric]:.4f} \u00b1 {s:.4f}" if pd.notna(s) else f"{row[metric]:.4f} (1 split)"
+
     summary_box(ax, [
-        f"leader   : {lead[metric]:.4f} \u00b1 {lead[f'{metric}_std']:.4f}",
-        f"runner-up: {runner[metric]:.4f} \u00b1 {runner[f'{metric}_std']:.4f}",
+        f"leader   : {pm(lead)}",
+        f"runner-up: {pm(runner)}",
         f"gap      : {lead[metric] - runner[metric]:.4f}",
-        f"rank-20  : {d.iloc[0][metric]:.4f}",
-        f"spread   : {lead[metric] - d.iloc[0][metric]:.4f} over 20 rows",
+        f"rank-{top:<4}: {d.iloc[0][metric]:.4f}",
+        f"spread   : {lead[metric] - d.iloc[0][metric]:.4f} over {top} rows",
     ], x=0.015, y=0.985, ha="left")
     title2(ax, f"Leaderboard \u2014 top {top} configurations by {METRIC_LABEL[metric]}",
-           "rows are encoder / dictionary learner / atoms / classifier; "
+           "rows are encoder / dictionary learner / atoms / classifier\n"
            "overlapping bars mean the ranking is not resolved by the data")
     save(fig, f"s7_leaderboard_{metric}.png")
 
@@ -595,11 +604,30 @@ def s8(df, clf="RandomForest"):
     save(fig, "s8_minority_tradeoff.png")
 
 
+# Headline metrics rendered as a matched pair. Both are reported side by side
+# because they answer different questions on an imbalanced corpus: ROC-AUC
+# scores the ranking irrespective of the decision threshold, Macro-F1 scores the
+# thresholded decision and so is sensitive to the calibration in thresholds.json.
+HEADLINE_METRICS = ["macro_f1", "roc_auc"]
+
+
 def main():
     df = load()
     print(f"loaded {len(df)} rows from {CSV.relative_to(ROOT)}")
-    for fn in (s1, s2, s3, s4, s5, s6, s7, s8):
-        fn(df)
+
+    # S3 already carries both metrics as panels; S8 lives in the
+    # precision/recall plane, where a ranking metric has no axis to occupy.
+    s3(df)
+    s8(df)
+
+    for metric in HEADLINE_METRICS:
+        print(f"  -- {METRIC_LABEL[metric]} --")
+        s1(df, metric=metric)
+        s2(df, metric=metric)
+        s4(df, metric=metric)
+        s5(df, metric=metric)
+        s6(df, metric=metric)
+        s7(df, metric=metric)
 
 
 if __name__ == "__main__":
