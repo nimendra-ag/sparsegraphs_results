@@ -1,0 +1,8 @@
+phase,mean_sec,std_sec,min_sec,max_sec,n
+data_load,12.62,0.12,12.54,12.71,2
+partition,0.01,0.00,0.01,0.01,2
+build_model,0.14,0.01,0.13,0.14,2
+train,397.72,4.72,394.38,401.05,2
+eval_train,1.42,0.02,1.41,1.43,2
+eval_test,0.36,0.00,0.36,0.36,2
+seed_total,412.27,4.85,408.84,415.70,2

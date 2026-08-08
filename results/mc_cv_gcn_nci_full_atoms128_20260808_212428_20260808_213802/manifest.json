@@ -1,0 +1,97 @@
+{
+  "implementation": "gcn",
+  "dataset": "nci_full",
+  "started_at": "20260808_212428",
+  "planned_seeds": [
+    54,
+    88
+  ],
+  "n_planned_seeds": 2,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "completed_seeds": [
+    54,
+    88
+  ],
+  "n_completed_seeds": 2,
+  "missing_seeds": [],
+  "selected_features_summary": {
+    "per_seed": {
+      "54": 60,
+      "88": 60
+    },
+    "mean": 60.0,
+    "std_ddof1": 0.0,
+    "min": 60,
+    "max": 60,
+    "n": 2
+  },
+  "updated_at": "2026-08-08T21:38:02",
+  "total_atoms": 128,
+  "failed_seeds": [],
+  "ended_at": "20260808_213802",
+  "runs": [
+    {
+      "master_seed": 54,
+      "n_selected_features": 60,
+      "n_scored_features": 60,
+      "selection": "fixed_atom_vocabulary",
+      "total_atoms": 128,
+      "encoder_class": "GCNConv x2 + global_mean_pool",
+      "dict_learner_class": null,
+      "hyperparameters": {
+        "hidden": 128,
+        "dropout": 0.5,
+        "learning_rate": 0.01,
+        "weight_decay": 0.0005,
+        "epochs": 200,
+        "batch_size": 64,
+        "sdf": "datasets/NCI_full/1total-connect.sdf"
+      },
+      "derived_seeds": {
+        "split": 3871718627,
+        "model": 3515227184,
+        "train": 164883562
+      },
+      "split_sizes": {
+        "train": 29549,
+        "test": 7388
+      },
+      "completed_at": "2026-08-08T21:24:44",
+      "seed_total_sec": 402.084
+    },
+    {
+      "master_seed": 88,
+      "n_selected_features": 60,
+      "n_scored_features": 60,
+      "selection": "fixed_atom_vocabulary",
+      "total_atoms": 128,
+      "encoder_class": "GCNConv x2 + global_mean_pool",
+      "dict_learner_class": null,
+      "hyperparameters": {
+        "hidden": 128,
+        "dropout": 0.5,
+        "learning_rate": 0.01,
+        "weight_decay": 0.0005,
+        "epochs": 200,
+        "batch_size": 64,
+        "sdf": "datasets/NCI_full/1total-connect.sdf"
+      },
+      "derived_seeds": {
+        "split": 606115163,
+        "model": 4081993792,
+        "train": 3464885831
+      },
+      "split_sizes": {
+        "train": 29549,
+        "test": 7388
+      },
+      "completed_at": "2026-08-08T21:31:32",
+      "seed_total_sec": 401.065
+    }
+  ]
+}
