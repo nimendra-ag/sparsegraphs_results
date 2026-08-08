@@ -1,0 +1,91 @@
+{
+  "implementation": "wl_csfddl_gpu",
+  "dataset": "nci_full",
+  "started_at": "20260808_114209",
+  "planned_seeds": [
+    84,
+    7
+  ],
+  "n_planned_seeds": 2,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "completed_seeds": [
+    7,
+    84
+  ],
+  "n_completed_seeds": 2,
+  "missing_seeds": [],
+  "selected_features_summary": {
+    "per_seed": {
+      "7": 1843,
+      "84": 1701
+    },
+    "mean": 1772.0,
+    "std_ddof1": 100.41,
+    "min": 1701,
+    "max": 1843,
+    "n": 2
+  },
+  "updated_at": "2026-08-08T11:48:39",
+  "total_atoms": 256,
+  "failed_seeds": [],
+  "ended_at": "20260808_114839",
+  "runs": [
+    {
+      "master_seed": 7,
+      "n_selected_features": 1843,
+      "n_scored_features": 10125,
+      "selection": "energy",
+      "energy": 0.99,
+      "min_features": 50,
+      "total_atoms": 256,
+      "encoder_class": "WL",
+      "dict_learner_class": "CSFDDLGPU",
+      "derived_seeds": {
+        "split": 2083679832,
+        "encoder": 3939563265,
+        "dict_learner": 4185785210,
+        "classifier": 142198000
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-08T11:47:47",
+      "kept_fraction": 0.182025,
+      "seed_total_sec": 196.439
+    },
+    {
+      "master_seed": 84,
+      "n_selected_features": 1701,
+      "n_scored_features": 10056,
+      "selection": "energy",
+      "energy": 0.99,
+      "min_features": 50,
+      "total_atoms": 256,
+      "encoder_class": "WL",
+      "dict_learner_class": "CSFDDLGPU",
+      "derived_seeds": {
+        "split": 960856117,
+        "encoder": 4251960576,
+        "dict_learner": 3909561870,
+        "classifier": 3002144987
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-08T11:44:28",
+      "kept_fraction": 0.169153,
+      "seed_total_sec": 184.526
+    }
+  ]
+}
