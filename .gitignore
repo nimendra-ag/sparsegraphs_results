@@ -14,3 +14,8 @@ cm/
 # Smaller aksvd_dictionary.npy files (wl_aksvd, gspan_cork_aksvd) stay tracked,
 # so ignore only this run family rather than the filename everywhere.
 artifacts/wl_edge_aksvd_*/dict_learner/aksvd_dictionary.npy
+
+# LC-KSVD solver state: 128MB+ per run, over GitHub's 100MB hard limit.
+# The learned lcksvd_dictionary.npy (55MB) stays tracked -- only the resumable
+# solver state is dropped, so runs stay reproducible from the dictionary alone.
+artifacts/wl_lcksvd_*/dict_learner/lcksvd_state.npz
