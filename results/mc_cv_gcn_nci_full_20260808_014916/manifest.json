@@ -1,0 +1,16 @@
+{
+  "implementation": "gcn",
+  "dataset": "nci_full",
+  "started_at": "20260808_014916",
+  "planned_seeds": [
+    3
+  ],
+  "n_planned_seeds": 1,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "runs": []
+}

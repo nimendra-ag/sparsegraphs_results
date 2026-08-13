@@ -1,0 +1,91 @@
+{
+  "implementation": "fsm_bayesian_gpu",
+  "dataset": "nci_full",
+  "started_at": "20260805_020143",
+  "planned_seeds": [
+    40,
+    24
+  ],
+  "n_planned_seeds": 2,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "completed_seeds": [
+    24,
+    40
+  ],
+  "n_completed_seeds": 2,
+  "missing_seeds": [],
+  "selected_features_summary": {
+    "per_seed": {
+      "24": 496,
+      "40": 464
+    },
+    "mean": 480.0,
+    "std_ddof1": 22.63,
+    "min": 464,
+    "max": 496,
+    "n": 2
+  },
+  "updated_at": "2026-08-05T02:13:21",
+  "total_atoms": 128,
+  "failed_seeds": [],
+  "ended_at": "20260805_021321",
+  "runs": [
+    {
+      "master_seed": 24,
+      "n_selected_features": 496,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 128,
+      "encoder_class": "FSM",
+      "dict_learner_class": "BayesianDLGPU",
+      "derived_seeds": {
+        "split": 29379551,
+        "encoder": 941820799,
+        "dict_learner": 1552483348,
+        "classifier": 3745659306
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-05T02:10:20",
+      "effective_dictionary_size": 117,
+      "seed_total_sec": 344.014
+    },
+    {
+      "master_seed": 40,
+      "n_selected_features": 464,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 128,
+      "encoder_class": "FSM",
+      "dict_learner_class": "BayesianDLGPU",
+      "derived_seeds": {
+        "split": 2749179582,
+        "encoder": 1028391067,
+        "dict_learner": 3427814173,
+        "classifier": 3689573898
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-05T02:04:32",
+      "effective_dictionary_size": 122,
+      "seed_total_sec": 345.395
+    }
+  ]
+}

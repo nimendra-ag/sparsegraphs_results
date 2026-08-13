@@ -1,0 +1,91 @@
+{
+  "implementation": "wl_aksvd",
+  "dataset": "nci_full",
+  "started_at": "20260808_112324",
+  "planned_seeds": [
+    10,
+    39
+  ],
+  "n_planned_seeds": 2,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "completed_seeds": [
+    10,
+    39
+  ],
+  "n_completed_seeds": 2,
+  "missing_seeds": [],
+  "selected_features_summary": {
+    "per_seed": {
+      "10": 1852,
+      "39": 1886
+    },
+    "mean": 1869.0,
+    "std_ddof1": 24.04,
+    "min": 1852,
+    "max": 1886,
+    "n": 2
+  },
+  "updated_at": "2026-08-08T11:26:03",
+  "total_atoms": 32,
+  "failed_seeds": [],
+  "ended_at": "20260808_112603",
+  "runs": [
+    {
+      "master_seed": 10,
+      "n_selected_features": 1852,
+      "n_scored_features": 10048,
+      "selection": "energy",
+      "energy": 0.99,
+      "min_features": 50,
+      "total_atoms": 32,
+      "encoder_class": "WL",
+      "dict_learner_class": "AKSVD",
+      "derived_seeds": {
+        "split": 3528835259,
+        "encoder": 2589590227,
+        "dict_learner": 3682338401,
+        "classifier": 2738643867
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-08T11:24:25",
+      "kept_fraction": 0.184315,
+      "seed_total_sec": 76.413
+    },
+    {
+      "master_seed": 39,
+      "n_selected_features": 1886,
+      "n_scored_features": 9999,
+      "selection": "energy",
+      "energy": 0.99,
+      "min_features": 50,
+      "total_atoms": 32,
+      "encoder_class": "WL",
+      "dict_learner_class": "AKSVD",
+      "derived_seeds": {
+        "split": 148300281,
+        "encoder": 2998581603,
+        "dict_learner": 2983090328,
+        "classifier": 3741398857
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-08T11:25:45",
+      "kept_fraction": 0.188619,
+      "seed_total_sec": 76.672
+    }
+  ]
+}

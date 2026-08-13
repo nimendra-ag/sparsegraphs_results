@@ -1,0 +1,21 @@
+{
+  "class": "BayesianDLGPU",
+  "name": "BayesianDLGPU",
+  "dimensions": 64,
+  "n_iter": 20,
+  "n_infer_iter": 50,
+  "n_burnin": 20,
+  "n_collect": 10,
+  "a0": 1.0,
+  "b0": null,
+  "c0": 1e-06,
+  "d0": 1e-06,
+  "e0": 1e-06,
+  "f0": 1e-06,
+  "init_method": "svd",
+  "dtype": "float32",
+  "infer_batch_size": null,
+  "seed": 42,
+  "device": "cuda",
+  "effective_dictionary_size": 64
+}

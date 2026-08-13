@@ -1,0 +1,37 @@
+{
+  "implementation": "gspan_cork_aksvd",
+  "dataset": "nci_full",
+  "started_at": "20260807_115852",
+  "ended_at": "20260807_151418",
+  "created_at": "2026-08-07T15:14:18",
+  "encoder_class": "GSpanCORK",
+  "dict_learner_class": "AKSVD",
+  "n_atoms": 64,
+  "feature_dim": 93,
+  "classes": null,
+  "models": {
+    "Logistic Regression": "models\\model_logistic_regression.joblib",
+    "Gradient Boosting": "models\\model_gradient_boosting.joblib",
+    "Linear SVM": "models\\model_linear_svm.joblib",
+    "Random Forest": "models\\model_random_forest.joblib"
+  },
+  "default_model": "Logistic Regression",
+  "git_commit": "2d64b7a0d44e5cf389edbabd89f92de776514a65",
+  "library_versions": {
+    "numpy": "2.5.0",
+    "scipy": "1.18.0",
+    "sklearn": "1.9.0",
+    "torch": null,
+    "joblib": "1.5.3"
+  },
+  "extra": {
+    "split_seed": 42,
+    "split": {
+      "vocab_train": 0.5,
+      "ml_train": 0.2,
+      "val": 0.15,
+      "test": 0.15
+    },
+    "note": "Headline performance is the MC-CV mean +/- std; the eval/ metrics here are this single instance's held-out test."
+  }
+}

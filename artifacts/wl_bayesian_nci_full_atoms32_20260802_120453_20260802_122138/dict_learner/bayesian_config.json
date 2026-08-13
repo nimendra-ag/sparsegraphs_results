@@ -1,0 +1,18 @@
+{
+  "class": "BayesianDL",
+  "name": "BayesianDL",
+  "dimensions": 32,
+  "n_iter": 10,
+  "n_infer_iter": 50,
+  "n_burnin": 20,
+  "n_collect": 10,
+  "a0": 1.0,
+  "b0": null,
+  "c0": 1e-06,
+  "d0": 1e-06,
+  "e0": 1e-06,
+  "f0": 1e-06,
+  "init_method": "svd",
+  "seed": 42,
+  "effective_dictionary_size": 32
+}

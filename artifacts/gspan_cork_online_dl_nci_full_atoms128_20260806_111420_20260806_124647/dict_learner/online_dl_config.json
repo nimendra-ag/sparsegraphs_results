@@ -1,0 +1,15 @@
+{
+  "class": "OnlineDL",
+  "name": "OnlineDL",
+  "dimensions": 128,
+  "alpha": 1.0,
+  "max_iter": 100,
+  "tol": 1e-06,
+  "fit_algorithm": "lars",
+  "transform_algorithm": "omp",
+  "transform_alpha": 0.1,
+  "transform_n_nonzero_coefs": null,
+  "n_jobs": null,
+  "seed": 42,
+  "verbose": true
+}

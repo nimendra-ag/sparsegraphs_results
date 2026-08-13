@@ -1,0 +1,89 @@
+{
+  "implementation": "fsm_frozen_ksvd_gpu",
+  "dataset": "nci_full",
+  "started_at": "20260805_022550",
+  "planned_seeds": [
+    41,
+    83
+  ],
+  "n_planned_seeds": 2,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "completed_seeds": [
+    41,
+    83
+  ],
+  "n_completed_seeds": 2,
+  "missing_seeds": [],
+  "selected_features_summary": {
+    "per_seed": {
+      "41": 459,
+      "83": 460
+    },
+    "mean": 459.5,
+    "std_ddof1": 0.71,
+    "min": 459,
+    "max": 460,
+    "n": 2
+  },
+  "updated_at": "2026-08-05T02:36:47",
+  "total_atoms": 256,
+  "failed_seeds": [],
+  "ended_at": "20260805_023647",
+  "runs": [
+    {
+      "master_seed": 41,
+      "n_selected_features": 459,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 256,
+      "encoder_class": "FSM",
+      "dict_learner_class": "FrozenKSVDLearnerGPU",
+      "derived_seeds": {
+        "split": 3566257030,
+        "encoder": 187373570,
+        "dict_learner": 2253364376,
+        "classifier": 1926565753
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-05T02:28:37",
+      "seed_total_sec": 323.306
+    },
+    {
+      "master_seed": 83,
+      "n_selected_features": 460,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 256,
+      "encoder_class": "FSM",
+      "dict_learner_class": "FrozenKSVDLearnerGPU",
+      "derived_seeds": {
+        "split": 1521106599,
+        "encoder": 3953570046,
+        "dict_learner": 2423180102,
+        "classifier": 2952730631
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-05T02:34:08",
+      "seed_total_sec": 324.312
+    }
+  ]
+}

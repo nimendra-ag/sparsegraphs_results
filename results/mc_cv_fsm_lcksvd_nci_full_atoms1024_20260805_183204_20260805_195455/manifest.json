@@ -1,0 +1,89 @@
+{
+  "implementation": "fsm_lcksvd",
+  "dataset": "nci_full",
+  "started_at": "20260805_183204",
+  "planned_seeds": [
+    95,
+    29
+  ],
+  "n_planned_seeds": 2,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "completed_seeds": [
+    29,
+    95
+  ],
+  "n_completed_seeds": 2,
+  "missing_seeds": [],
+  "selected_features_summary": {
+    "per_seed": {
+      "29": 471,
+      "95": 480
+    },
+    "mean": 475.5,
+    "std_ddof1": 6.36,
+    "min": 471,
+    "max": 480,
+    "n": 2
+  },
+  "updated_at": "2026-08-05T19:54:55",
+  "total_atoms": 1024,
+  "failed_seeds": [],
+  "ended_at": "20260805_195455",
+  "runs": [
+    {
+      "master_seed": 29,
+      "n_selected_features": 471,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 1024,
+      "encoder_class": "FSM",
+      "dict_learner_class": "LCKSVDLearner",
+      "derived_seeds": {
+        "split": 728436203,
+        "encoder": 3843391878,
+        "dict_learner": 808480236,
+        "classifier": 1320689377
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-05T19:51:49",
+      "seed_total_sec": 2457.39
+    },
+    {
+      "master_seed": 95,
+      "n_selected_features": 480,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 1024,
+      "encoder_class": "FSM",
+      "dict_learner_class": "LCKSVDLearner",
+      "derived_seeds": {
+        "split": 2131335938,
+        "encoder": 164945606,
+        "dict_learner": 2327252785,
+        "classifier": 2686641202
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-08-05T19:10:47",
+      "seed_total_sec": 2507.631
+    }
+  ]
+}

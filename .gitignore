@@ -6,4 +6,16 @@ datasets
 **/__pycache__/
 cm/
 # large sparse-code cache (exceeds GitHub 100MB limit)
-code_cache/sparse_codes.npz
+# needs the **/ prefix: a pattern with a slash is anchored to the repo root,
+# so plain "code_cache/sparse_codes.npz" never matched artifacts/<run>/code_cache/
+**/code_cache/sparse_codes.npz
+
+# wl_edge AK-SVD dictionaries: 136MB-2.1GB each, over GitHub's 100MB hard limit.
+# Smaller aksvd_dictionary.npy files (wl_aksvd, gspan_cork_aksvd) stay tracked,
+# so ignore only this run family rather than the filename everywhere.
+artifacts/wl_edge_aksvd_*/dict_learner/aksvd_dictionary.npy
+
+# LC-KSVD solver state: 128MB+ per run, over GitHub's 100MB hard limit.
+# The learned lcksvd_dictionary.npy (55MB) stays tracked -- only the resumable
+# solver state is dropped, so runs stay reproducible from the dictionary alone.
+artifacts/wl_lcksvd_*/dict_learner/lcksvd_state.npz
