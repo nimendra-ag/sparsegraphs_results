@@ -1,0 +1,12 @@
+{
+  "class": "FDDLGPU",
+  "name": "FDDLGPU",
+  "k": 256,
+  "lambda1": 0.1,
+  "lambda2": 0.1,
+  "eta": 1.0,
+  "max_iter": 64,
+  "lr": 0.01,
+  "ipm_iters": 15,
+  "seed": 42
+}
