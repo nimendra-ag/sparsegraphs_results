@@ -301,15 +301,20 @@ def source_note(source):
     return {"mccv": "", "kfold": "  (k-fold)", "artifact": "  (1 split)"}.get(source, "")
 
 
-def baseline_best_rows(df, metric, clf=None):
-    """Each reference method's best row under `metric`, as (method, row, own).
+def baseline_series(df, metric, clf=None):
+    """Each reference method's full sweep, as (method, frame, own).
 
     ``sf`` and ``graph2vec`` feed the same four classifiers as the pipelines, so
     they are read at whichever classifier the figure fixed -- comparing a
     pipeline's RF score against a baseline's LogReg score would confound the two
     factors the study separates. ``gcn`` is an end-to-end network with no
-    interchangeable classifier stage (``own=True``); its single best result
-    stands in every panel.
+    interchangeable classifier stage (``own=True``); its sweep stands in every
+    panel.
+
+    A baseline's ``atoms`` is the width of the representation it hands the
+    classifier -- graph2vec's embedding dimension, gcn's hidden size -- which is
+    the same quantity the pipelines sweep as dictionary atoms. That shared
+    meaning is what lets the sweeps share an x-axis.
     """
     base = df[df["family"] == "baseline"].dropna(subset=[metric])
     out = []
@@ -322,19 +327,78 @@ def baseline_best_rows(df, metric, clf=None):
             d = d[d["classifier"] == clf]
             if d.empty:
                 continue
-        out.append((m, d.loc[d[metric].idxmax()], own))
+        out.append((m, d.sort_values("atoms"), own))
     return out
 
 
+def baseline_best_rows(df, metric, clf=None):
+    """Each sweep reduced to its best row, as (method, row, own, n_widths)."""
+    return [(m, d.loc[d[metric].idxmax()], own, d["atoms"].nunique())
+            for m, d, own in baseline_series(df, metric, clf=clf)]
+
+
 def baseline_levels(df, metric, clf=None):
-    """The same picks reduced to (method, value, atoms, own) for ruling."""
-    return [(m, float(r[metric]), int(r["atoms"]), own)
-            for m, r, own in baseline_best_rows(df, metric, clf=clf)]
+    """The same picks as (method, value, atoms, own, n_widths) for ruling."""
+    return [(m, float(r[metric]), int(r["atoms"]), own, n)
+            for m, r, own, n in baseline_best_rows(df, metric, clf=clf)]
 
 
-def baseline_label(m, v, atoms, own, inside=True):
-    tag = "own net" if own else f"@{atoms}"
+def baseline_label(m, v, atoms, own, inside=True, n=1):
+    """Name a single reference number, and say how it was picked.
+
+    A baseline swept over several widths is being reported at its argmax, which
+    is only a fair comparison because the pipeline it sits beside is reported
+    the same way. Saying "best of 7 widths" rather than a bare "@2048" keeps
+    that selection visible instead of passing the number off as the method's
+    one true score.
+    """
+    if own and n <= 1:
+        tag = "own net"
+    elif n > 1:
+        tag = f"best of {n} widths, @{atoms}"
+    else:
+        tag = f"fixed {atoms}-dim"
     return f"{m} {v:.4f} ({tag})" + ("" if inside else " — off scale")
+
+
+def draw_baseline_sweeps(ax, series, metric, keep_ylim=True, ylim=None):
+    """Draw each reference across the width axis the pipelines already occupy.
+
+    A method with one width (sf, at a fixed 26 features) has nothing to sweep
+    and stays a rule. A method with several is drawn as its own curve, so the
+    comparison is like for like: the reader sees both sweeps, not one sweep
+    against the other's ceiling. That distinction matters here -- graph2vec's
+    Minority-F1 moves 0.24 -> 0.37 across its dimensions under LogReg, further
+    than the gap between most of the dictionary learners being compared.
+    """
+    lo, hi = ylim if ylim is not None else ax.get_ylim()
+    handles = []
+    for m, d, own in series:
+        vals = d[metric].to_numpy(float)
+        swept = len(d) > 1
+        if swept:
+            ax.plot(d["atoms"], vals, color=B_COLOR, linestyle=B_DASH[m], lw=1.3,
+                    alpha=0.85, marker=B_MARK[m], markersize=4.5,
+                    markerfacecolor="white", markeredgecolor=B_COLOR,
+                    markeredgewidth=0.9, zorder=2)
+            inside = vals.max() >= lo and vals.min() <= hi
+            label = (f"{m} {vals.min():.4f}–{vals.max():.4f} over {len(d)} widths"
+                     + ("" if inside else " — off scale"))
+        else:
+            v = float(vals[0])
+            inside = lo <= v <= hi
+            if inside:
+                ax.axhline(v, color=B_COLOR, linestyle=B_DASH[m], lw=1.3,
+                           alpha=0.75, zorder=2)
+            label = baseline_label(m, v, int(d["atoms"].iloc[0]), own, inside, n=1)
+        handles.append(Line2D(
+            [], [], color=B_COLOR, linestyle=B_DASH[m], lw=1.3,
+            marker=B_MARK[m] if swept else None, markersize=4.5,
+            markerfacecolor="white", markeredgecolor=B_COLOR, markeredgewidth=0.9,
+            label=label))
+    if keep_ylim:
+        ax.set_ylim(lo, hi)
+    return handles
 
 
 def draw_baselines(ax, levels, keep_ylim=True, ylim=None):
@@ -352,13 +416,13 @@ def draw_baselines(ax, levels, keep_ylim=True, ylim=None):
     # panel for its own limits would report the widened one.
     lo, hi = ylim if ylim is not None else ax.get_ylim()
     handles = []
-    for m, v, atoms, own in levels:
+    for m, v, atoms, own, n in levels:
         inside = lo <= v <= hi
         if inside:
             ax.axhline(v, color=B_COLOR, linestyle=B_DASH[m], lw=1.3,
                        alpha=0.75, zorder=2)
         handles.append(Line2D([], [], color=B_COLOR, linestyle=B_DASH[m], lw=1.3,
-                              label=baseline_label(m, v, atoms, own, inside)))
+                              label=baseline_label(m, v, atoms, own, inside, n)))
     if keep_ylim:
         ax.set_ylim(lo, hi)
     return handles
@@ -430,11 +494,11 @@ def s1(df, encoder, clf, metric, base=None):
     # is measured against. Keeping them apart stops a baseline from reading as
     # an eighth dictionary learner.
     ax.add_artist(ax.legend(loc="lower left", fontsize=8, framealpha=0.9))
-    levels = baseline_levels(base if base is not None else df, metric, clf=clf)
-    if levels:
-        handles = draw_baselines(ax, levels)
+    series = baseline_series(base if base is not None else df, metric, clf=clf)
+    if series:
+        handles = draw_baseline_sweeps(ax, series, metric)
         ax.legend(handles=handles, loc="upper right", fontsize=8, framealpha=0.9,
-                  title="baselines", title_fontsize=8)
+                  title="baselines (swept ones share this x-axis)", title_fontsize=8)
     summary_box(ax, [f"best {METRIC_LABEL[metric]} per learner", "-" * 30] + rows,
                 x=0.015, y=0.985, ha="left")
     # Say what the figure actually shows. The seed spread is no longer drawn --
@@ -499,14 +563,15 @@ def s2(df, clf, metric, base=None):
         style(ax, "", "")
         log2_axis(ax, sub["atoms"], fontsize=8)
 
-    # The panels share a y-axis, so the reference levels are measured once
-    # against the common range and then ruled across every panel.
-    levels = baseline_levels(base if base is not None else df, metric, clf=clf)
+    # The panels share a y-axis, so the references are measured once against the
+    # common range and then drawn into every panel.
+    series = baseline_series(base if base is not None else df, metric, clf=clf)
     base_handles = []
-    if levels:
+    if series:
         ylim = flat[0].get_ylim()
         for ax in flat[:len(learners)]:
-            base_handles = draw_baselines(ax, levels, keep_ylim=False, ylim=ylim)
+            base_handles = draw_baseline_sweeps(ax, series, metric,
+                                                keep_ylim=False, ylim=ylim)
         flat[0].set_ylim(*ylim)
 
     for ax in flat[len(learners):]:
@@ -572,14 +637,17 @@ def s3(df, encoder, clf, base=None):
                     marker=L_MARK[learner], markersize=4.5, markeredgecolor="black",
                     markeredgewidth=0.5, zorder=3)
             winners.setdefault(metric, []).append((d[metric].max(), learner))
-        # Each panel is a different metric on its own y-scale, so the reference
-        # levels are re-read per panel rather than shared.
-        levels = baseline_levels(base if base is not None else df, metric, clf=clf)
-        if levels:
-            base_handles[metric] = draw_baselines(ax, levels)
+        # Each panel is a different metric on its own y-scale, so the references
+        # are re-read per panel rather than shared.
+        series = baseline_series(base if base is not None else df, metric, clf=clf)
+        if series:
+            base_handles[metric] = draw_baseline_sweeps(ax, series, metric)
             # The values differ panel to panel, so the reference legend has to
-            # live in the panel rather than at figure level.
-            ax.legend(handles=base_handles[metric], loc="lower left", fontsize=7,
+            # live in the panel rather than at figure level. These panels hold
+            # nothing but curves -- no summary box for "best" to miss -- so
+            # automatic placement beats any fixed corner across 16 figures whose
+            # curves rise in some and fall in others.
+            ax.legend(handles=base_handles[metric], loc="best", fontsize=7,
                       framealpha=0.9, title="baselines", title_fontsize=7)
         ax.set_title(METRIC_LABEL[metric], fontsize=10)
         style(ax, "dictionary atoms (log\u2082)", METRIC_LABEL[metric])
@@ -669,11 +737,14 @@ def s4(df, clf, metric, base=None):
     ax.tick_params(which="minor", length=0)
 
     if levels:
-        strip = np.array([[v for _, v, _, _ in levels]])
+        strip = np.array([[v for _, v, _, _, _ in levels]])
         axb.imshow(strip, cmap="Blues", vmin=lo - 0.012, vmax=hi + 0.005, aspect="auto")
-        for j, (m, v, atoms, own) in enumerate(levels):
+        for j, (m, v, atoms, own, n) in enumerate(levels):
             fg = "white" if (v - lo) / max(hi - lo, 1e-9) > 0.55 else "black"
-            note = "own net" if own else f"{atoms} atoms"
+            # Matches how the matrix cells above are chosen -- best over the
+            # widths that method swept -- so the strip is a like-for-like row.
+            note = f"@{atoms} of {n} widths" if n > 1 else (
+                "own net" if own else f"{atoms} atoms, fixed")
             if v < lo:
                 note += "  (below scale)"
             elif v > hi:
@@ -681,7 +752,7 @@ def s4(df, clf, metric, base=None):
             axb.text(j, -0.14, f"{v:.4f}", ha="center", va="center", color=fg, fontsize=13)
             axb.text(j, 0.22, note, ha="center", va="center", color=fg,
                      fontsize=8, family="monospace")
-        axb.set_xticks(range(len(levels)), [m for m, _, _, _ in levels])
+        axb.set_xticks(range(len(levels)), [m for m, _, _, _, _ in levels])
         axb.set_yticks([0], ["baselines"])
         axb.set_xticks(np.arange(-0.5, len(levels), 1), minor=True)
         axb.set_yticks([-0.5, 0.5], minor=True)
@@ -986,16 +1057,16 @@ def s8(df, clf, base=None):
     # as points rather than rules. A method that never predicts the minority
     # class sits at the origin -- a real result, but one that would blow the
     # window open, so it is kept out of the extent and reported in the legend.
-    bpts = [(m, r, own) for m, r, own in
+    bpts = [(m, r, own, n) for m, r, own, n in
             baseline_best_rows(base if base is not None else df, "minority_f1", clf=clf)
             if pd.notna(r["minority_precision"]) and pd.notna(r["minority_recall"])]
-    scaled = [(m, r, own) for m, r, own in bpts
+    scaled = [(m, r, own, n) for m, r, own, n in bpts
               if r["minority_recall"] > 0 and r["minority_precision"] > 0]
 
     xs = np.concatenate([best["minority_recall"].to_numpy(float),
-                         [r["minority_recall"] for _, r, _ in scaled]])
+                         [r["minority_recall"] for _, r, _, _ in scaled]])
     ys = np.concatenate([best["minority_precision"].to_numpy(float),
-                         [r["minority_precision"] for _, r, _ in scaled]])
+                         [r["minority_precision"] for _, r, _, _ in scaled]])
     style(ax, "Minority-Recall", "Minority-Precision")
     zoom_to_data(ax, xs, ys)
     x0, x1 = ax.get_xlim()
@@ -1004,7 +1075,7 @@ def s8(df, clf, base=None):
     # Iso-F1 contours, drawn only where they cross the visible window so the
     # panel is not covered in curves that say nothing about these points.
     r_grid = np.linspace(max(x0, 1e-3), x1, 400)
-    f1s = list(best["minority_f1"]) + [r["minority_f1"] for _, r, _ in scaled]
+    f1s = list(best["minority_f1"]) + [r["minority_f1"] for _, r, _, _ in scaled]
     f1_lo = max(0.05, np.floor(min(f1s) * 20) / 20 - 0.05)
     f1_hi = min(0.95, np.ceil(max(f1s) * 20) / 20 + 0.05)
     for f1 in np.arange(f1_lo, f1_hi + 1e-9, 0.05):
@@ -1026,7 +1097,7 @@ def s8(df, clf, base=None):
               for _, r in best.iterrows()]
 
     base_handles = []
-    for m, r, own in bpts:
+    for m, r, own, n in bpts:
         inside = (x0 <= r["minority_recall"] <= x1
                   and y0 <= r["minority_precision"] <= y1)
         if inside:
@@ -1037,7 +1108,7 @@ def s8(df, clf, base=None):
         base_handles.append(Line2D(
             [], [], color=B_COLOR, marker=B_MARK[m], markersize=9, linestyle="none",
             markeredgecolor="white", markeredgewidth=0.8,
-            label=baseline_label(m, r["minority_f1"], int(r["atoms"]), own, inside)))
+            label=baseline_label(m, r["minority_f1"], int(r["atoms"]), own, inside, n)))
 
     repel(ax, labels)
     ax.set_xlim(x0, x1)
