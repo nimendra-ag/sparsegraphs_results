@@ -24,6 +24,12 @@ def _encoder_loaders():
         from graph_encoders.fsm import FSM
         return FSM
 
+    def _wl_min_count():
+        # Selection-ablation arm: WL's features, FSM/graph2vec's raw-frequency
+        # trim. Paired with the WL baseline in implements/wl_min_count_*.
+        from graph_encoders.wl_with_min_count import WLMinCount
+        return WLMinCount
+
     def _gspan_cork():
         from graph_encoders.gspan_cork import GSpanCORK
         return GSpanCORK
@@ -36,6 +42,7 @@ def _encoder_loaders():
     return {
         "WL": _wl,
         "EdgeWL": _edge_wl,
+        "WLMinCount": _wl_min_count,
         "FSM": _fsm,
         "GSpanCORK": _gspan_cork,
         "WLFull": _wl_full,

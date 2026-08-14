@@ -1,0 +1,10 @@
+{
+  "class": "WLMinCount",
+  "name": "MinCountWL",
+  "wl_iterations": 2,
+  "attributed": true,
+  "erase_base_features": true,
+  "n_vocab": 6668,
+  "min_count": 2,
+  "seed": 42
+}
