@@ -9,7 +9,7 @@ from dict_learners.dict_learner import DictLearner
 class FDDLGPU(DictLearner):
     def __init__(
             self,
-            k: int = 32,
+            k: int = 10000,
             lambda1: float = 0.1,
             lambda2: float = 0.1,
             eta: float = 1.0,
@@ -116,30 +116,54 @@ class FDDLGPU(DictLearner):
                 if j != i:
                     j_start = j * k
                     j_end = j_start + k
-                    A_hat -= D[:, j_start:j_end] @ X[j_start:j_end, :]
+                    # addmm_ fuses the subtraction, so no (features x N) temporary
+                    A_hat.addmm_(D[:, j_start:j_end], X[j_start:j_end, :], alpha=-1.0)
 
             col_start = sum(class_sizes[:i])
             col_end = col_start + class_sizes[i]
             Ai = A[:, col_start:col_end]
             Xii = Xi_all[:, col_start:col_end]
 
-            # Equivalent slicing/concats in pyTorch
-            X_others = torch.cat((Xi_all[:, :col_start], Xi_all[:, col_end:]), dim=1)
-            zeros = torch.zeros((A.shape[0], X_others.shape[1]), device=self.device)
-
-            Lambda_i = torch.cat((A_hat, Ai, zeros), dim=1)
-            Zi = torch.cat((Xi_all, Xii, X_others), dim=1)
+            # The atom sweep below is the Gram-matrix form of this original loop:
+            #
+            #   Lambda_i = [A_hat | Ai | 0]      (features x 2N)
+            #   Zi       = [Xi_all | Xii | X_others]
+            #   Y        = Lambda_i - Di @ Zi + d_l @ z_l
+            #   d_new    = Y @ z_l.T
+            #
+            # which rebuilt a full (features x 2N) GEMM for EVERY atom -- k of them
+            # per class. Expanding d_new shows Y itself is never needed, only two
+            # projections of it:
+            #
+            #   d_new = (Lambda_i @ Zi.T)[:, l] - Di @ (Zi @ Zi.T)[:, l]
+            #           + d_l * (Zi @ Zi.T)[l, l]
+            #
+            # so both Gram products are hoisted out of the loop:
+            #
+            #   B = Lambda_i @ Zi.T = A_hat @ Xi_all.T + Ai @ Xii.T
+            #       (the zero block annihilates the X_others term)
+            #   G = Zi @ Zi.T       = 2 * Xi_all @ Xi_all.T
+            #       (Xii and X_others partition Xi_all's columns, so their Grams
+            #        sum back to Xi_all's -- Gram sums are permutation-invariant)
+            #
+            # This is algebraically exact, not an approximation: k huge GEMMs
+            # collapse into one GEMM plus k cheap mat-vecs, and the per-atom
+            # (features x 2N) allocations disappear entirely. Di stays a view of D
+            # and is written in place, so the sweep keeps its Gauss-Seidel
+            # semantics (atom l sees atoms < l already updated), exactly as before.
+            B = A_hat @ Xi_all.T
+            B.addmm_(Ai, Xii.T)
+            G = 2.0 * (Xi_all @ Xi_all.T)
 
             for atom_idx in range(k):
-                d_l = Di[:, atom_idx].view(-1, 1)
-                z_l = Zi[atom_idx, :].view(1, -1)
-
-                Y = Lambda_i - (Di @ Zi) + (d_l @ z_l)
-                d_new = Y @ z_l.T
-                norm_d = torch.norm(d_new)
-                Di[:, atom_idx] = (d_new / norm_d).flatten() if norm_d > 1e-10 else d_l.flatten()
-
-            D[:, start_idx:end_idx] = Di
+                d_l = Di[:, atom_idx].clone()
+                d_new = B[:, atom_idx] - Di @ G[:, atom_idx] + d_l * G[atom_idx, atom_idx]
+                norm_d = torch.linalg.vector_norm(d_new)
+                # torch.where, not a Python `if`: comparing a CUDA scalar in Python
+                # forces a host sync, and at k atoms/class that is k stalls per
+                # iteration -- which dominates once the GEMMs above are gone.
+                Di[:, atom_idx] = torch.where(
+                    norm_d > 1e-10, d_new / norm_d.clamp_min(1e-10), d_l)
         return D
 
     def fit(self, training_graph_embeddings, y_train=None):
