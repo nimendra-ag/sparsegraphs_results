@@ -1,0 +1,6 @@
+{
+  "class": "PCAThenDictLearner",
+  "name": "PCA->FDDLGPU",
+  "reducer_class": "PCAReducer",
+  "inner_class": "FDDLGPU"
+}

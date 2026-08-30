@@ -1,0 +1,107 @@
+{
+  "kind": "monte_carlo_cv",
+  "implementation": "wl_aksvd",
+  "dataset": "nci_full",
+  "status": "complete",
+  "started_at": "20260731_190020",
+  "n_seeds": 5,
+  "master_seeds": [
+    16,
+    36,
+    70,
+    66,
+    71
+  ],
+  "worker_script": "wl_aksvd_mccv.py",
+  "encoder": {
+    "class": "WL",
+    "params": {
+      "name": "ImbalanceAwareWL",
+      "wl_iterations": 2,
+      "attributed": true,
+      "erase_base_features": true,
+      "n_vocab": 1000,
+      "min_features": 50,
+      "selection": "energy",
+      "energy": 0.99
+    }
+  },
+  "dict_learner": {
+    "class": "AKSVD",
+    "params": {
+      "name": "AKSVD",
+      "dimensions": 512,
+      "max_iter": 10,
+      "tol": 1e-06,
+      "n_non_zero_coefs": 10
+    }
+  },
+  "protocol": {
+    "splits_of_full": {
+      "vocab_train": 0.5,
+      "ML_train": 0.2,
+      "val": 0.15,
+      "test": 0.15
+    },
+    "test_size": 0.15,
+    "val_size_of_remainder": 0.17647058823529413,
+    "vocab_ml_ratio": 0.2857142857142857,
+    "stratified": true,
+    "threshold_tuning_split": "val",
+    "resampling": "Monte Carlo CV: one fresh stratified partition per master seed",
+    "metric_keys": [
+      "Macro-Precision",
+      "Macro-Recall",
+      "Macro-F1",
+      "Macro-PR-AUC",
+      "Accuracy",
+      "ROC-AUC",
+      "MCC",
+      "Minority-Precision",
+      "Minority-Recall",
+      "Minority-F1",
+      "Minority-PR-AUC"
+    ]
+  },
+  "environment": {
+    "python": "3.12.13",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "git_commit": "9c53f7f77c3c0ea81d21d3650f55965488fa1ba4",
+    "library_versions": {
+      "numpy": "2.5.0",
+      "scipy": "1.18.0",
+      "sklearn": "1.9.0",
+      "torch": null,
+      "joblib": "1.5.3"
+    }
+  },
+  "files": {
+    "per_run_metrics": "per_run_metrics.csv",
+    "per_run_timings": "per_run_timings.csv",
+    "summary_mean_std": "summary_mean_std.csv",
+    "summary_timings": "summary_timings.csv"
+  },
+  "schema": "mc_cv_run/1",
+  "updated_at": "2026-07-31T19:25:44",
+  "total_atoms": 512,
+  "n_runs": 5,
+  "completed_seeds": [
+    16,
+    36,
+    66,
+    70,
+    71
+  ],
+  "classifiers": [
+    "GradientBoosting",
+    "LinearSVM",
+    "LogisticRegression",
+    "RandomForest",
+    "SRC_fddl",
+    "SRC_pure"
+  ],
+  "aggregated_at": "2026-07-31T19:25:44",
+  "ended_at": "20260731_192544",
+  "failed_seeds": [],
+  "run_dir": "results\\mc_cv_wl_aksvd_nci_full_atoms512_20260731_190020_20260731_192544"
+}

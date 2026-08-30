@@ -1,0 +1,11 @@
+{
+  "class": "FrozenKSVDLearner",
+  "name": "FrozenKSVD",
+  "n_components_base": 96,
+  "n_components_residual": 32,
+  "max_iter": 10,
+  "tol": 1e-06,
+  "n_non_zero_coefs": 10,
+  "base_label": -1,
+  "seed": 42
+}

@@ -1,0 +1,10 @@
+{
+  "class": "WL",
+  "name": "ImbalanceAwareWL",
+  "wl_iterations": 2,
+  "attributed": true,
+  "erase_base_features": true,
+  "n_vocab": 6040,
+  "min_features": 50,
+  "seed": 42
+}
