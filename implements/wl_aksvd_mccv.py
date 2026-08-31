@@ -15,6 +15,7 @@ Usage
     python implements/wl_aksvd_mccv.py                 # full run
     python implements/wl_aksvd_mccv.py --seed 7 --out-dir results/<run>
     python implements/wl_aksvd_mccv.py --aggregate --out-dir results/<run>
+    python implements/wl_aksvd_mccv.py --dataset-id 41   # a different NCI screen
 """
 
 import sys
@@ -37,6 +38,10 @@ from dict_learners.aksvd import AKSVD
 # command line, so re-drawing it in each subprocess is harmless.
 MASTER_SEEDS = mccv.default_master_seeds()
 DATASET = "nci_full"
+# NCI screen to benchmark (1, 33, 41, 47, 81, 83, 109, 123, 145); override on
+# the command line with --dataset-id. It lands in the run folder name
+# ("mc_cv_wl_aksvd_nci_full_id33_...") and in the run manifest.
+DATASET_ID = 33
 IMPLEMENTATION = "wl_aksvd"
 
 
@@ -46,6 +51,7 @@ if __name__ == "__main__":
         dict_learner_factory=lambda seed: AKSVD(seed=seed),
         implementation=IMPLEMENTATION,
         dataset=DATASET,
+        dataset_id=DATASET_ID,
         worker_script=__file__,
         master_seeds=MASTER_SEEDS,
     )

@@ -12,12 +12,16 @@ from sklearn.preprocessing import MaxAbsScaler
 
 from utils import mccv
 from utils.evaluator import Evaluator
-from utils.graph_data import GraphDataLoader
+from utils.graph_data import GraphDataLoader, dataset_load_kwargs, dataset_tag
 from utils.seeding import seed_everything
 from sf.sf import SF
 
 
 DATASET = "nci_full"
+# NCI screen to run on (1, 33, 41, 47, 81, 83, 109, 123, 145). Recorded in the
+# run manifest and in the folder name via DATASET_TAG.
+DATASET_ID = 33
+DATASET_TAG = dataset_tag(DATASET, DATASET_ID)
 IMPLEMENTATION = "sf"
 
 # 10-fold stratified CV, seed 1 — unchanged from the original notebook.
@@ -81,7 +85,7 @@ def run_fold(fold, X, y, train_index, test_index, dimensions, save_report_to=Non
     print("Tuning thresholds on the validation slice...")
     evaluator_val = Evaluator(
         X_train_s, y_train, X_val_s, y_val,
-        implementation=IMPLEMENTATION, dataset=DATASET,
+        implementation=IMPLEMENTATION, dataset=DATASET_TAG,
         n_atoms=dimensions, random_state=MODEL_SEED,
     )
     with mccv._phase(timings, "val_logreg"):
@@ -98,7 +102,7 @@ def run_fold(fold, X, y, train_index, test_index, dimensions, save_report_to=Non
     print("Evaluating on the held-out test fold...")
     evaluator_test = Evaluator(
         X_train_s, y_train, X_test_s, y_test,
-        implementation=IMPLEMENTATION, dataset=DATASET,
+        implementation=IMPLEMENTATION, dataset=DATASET_TAG,
         n_atoms=dimensions, random_state=MODEL_SEED,
         fixed_thresholds=val_thresholds,  # reuse validation-tuned thresholds
     )
@@ -165,20 +169,21 @@ def fold_manifest_entry(fold, dimensions, split_sizes, seconds):
 def main():
     started_at = datetime.now().strftime("%Y%m%d_%H%M%S")
     out_dir = os.path.join(
-        "results", f"kfold_{IMPLEMENTATION}_{DATASET}_{started_at}"
+        "results", f"kfold_{IMPLEMENTATION}_{DATASET_TAG}_{started_at}"
     )
     os.makedirs(out_dir, exist_ok=True)
     print(f"{N_SPLITS}-fold CV | out_dir={out_dir}")
 
     seed_everything(MODEL_SEED)
-    graphs, y = GraphDataLoader().load(DATASET)
+    graphs, y = GraphDataLoader().load(
+        DATASET, **dataset_load_kwargs(DATASET, DATASET_ID))
     y = np.array(y)
 
     X, dimensions = build_embeddings(graphs)
 
     manifest_path = mccv.init_manifest(
         out_dir, IMPLEMENTATION, DATASET, seeds=range(1, N_SPLITS + 1),
-        started_at=started_at,
+        started_at=started_at, dataset_id=DATASET_ID,
     )
     print(f"(manifest at {manifest_path}; folds are recorded under 'master_seed')")
 
@@ -199,6 +204,7 @@ def main():
             fold_manifest_entry(fold, dimensions, split_sizes,
                                 timings["seed_total"]),
             implementation=IMPLEMENTATION, dataset=DATASET,
+            dataset_id=DATASET_ID,
         )
 
     # The aggregator is shared with the MC-CV arms so the summary CSV is
@@ -212,7 +218,7 @@ def main():
     # Match the naming convention of the other run folders.
     final_dir = os.path.join(
         "results",
-        f"kfold_{IMPLEMENTATION}_{DATASET}_dim{dimensions}_{started_at}_{ended_at}",
+        f"kfold_{IMPLEMENTATION}_{DATASET_TAG}_dim{dimensions}_{started_at}_{ended_at}",
     )
     try:
         os.rename(out_dir, final_dir)

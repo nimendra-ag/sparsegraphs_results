@@ -3,7 +3,7 @@
 A bundle is a single self-describing directory holding everything the app needs
 to classify a new graph:
 
-    <root>/<implementation>_<dataset>_atoms<N>_<timestamp>/
+    <root>/<implementation>_<dataset>[_id<ID>]_atoms<N>_<start>_<end>/
         manifest.json          # what this is + how to rebuild it
         encoder/               # encoder.save() writes here (e.g. WL vocab+config)
         dict_learner/          # dict_learner.save() writes here (e.g. FDDL D+state)
@@ -26,6 +26,7 @@ from datetime import datetime
 import numpy as np
 import joblib
 
+from utils.graph_data import dataset_tag, resolve_dataset_id
 from utils.registry import get_encoder_class, get_dict_learner_class
 
 ENCODER_SUBDIR = "encoder"
@@ -41,16 +42,20 @@ def _model_slug(model_name):
     return model_name.lower().replace(" ", "_")
 
 
-def build_bundle_name(implementation, dataset, n_atoms, started_at=None, ended_at=None):
+def build_bundle_name(implementation, dataset, n_atoms, started_at=None,
+                      ended_at=None, dataset_id=None):
     """Dynamic, self-describing bundle name — mirrors the results/ convention.
 
     Carries both the start and end timestamps so a bundle's build duration is
-    visible from its folder name alone.
+    visible from its folder name alone, and the dataset id for datasets that
+    have one (NCI), so bundles built on different screens are distinguishable
+    without opening their manifests.
     """
     ended_at = ended_at or datetime.now().strftime("%Y%m%d_%H%M%S")
     started_at = started_at or ended_at
     atoms_part = f"_atoms{n_atoms}" if n_atoms is not None else ""
-    return f"{implementation}_{dataset}{atoms_part}_{started_at}_{ended_at}"
+    tag = dataset_tag(dataset, dataset_id)
+    return f"{implementation}_{tag}{atoms_part}_{started_at}_{ended_at}"
 
 
 def _git_commit():
@@ -84,6 +89,7 @@ def save_bundle(
     default_model=None,
     extra_metadata=None,
     started_at=None,
+    dataset_id=None,
 ):
     """Serialise a full pipeline into a new versioned bundle directory.
 
@@ -94,9 +100,11 @@ def save_bundle(
     """
     n_atoms = dict_learner.n_atoms()
     ended_at = datetime.now().strftime("%Y%m%d_%H%M%S")
+    dataset_id = resolve_dataset_id(dataset, dataset_id)
     bundle_dir = os.path.join(
         root,
-        build_bundle_name(implementation, dataset, n_atoms, started_at, ended_at),
+        build_bundle_name(implementation, dataset, n_atoms, started_at, ended_at,
+                          dataset_id=dataset_id),
     )
     os.makedirs(bundle_dir, exist_ok=True)
 
@@ -123,6 +131,8 @@ def save_bundle(
     manifest = {
         "implementation": implementation,
         "dataset": dataset,
+        # None for datasets without an id (MUTAG, PTC-MR, ogbg-molhiv).
+        "dataset_id": dataset_id,
         "started_at": started_at,
         "ended_at": ended_at,
         "created_at": datetime.now().isoformat(timespec="seconds"),

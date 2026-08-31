@@ -32,6 +32,10 @@ OUT_CSV = ROOT / "analysis" / "all_results.csv"
 OUT_REPORT = ROOT / "analysis" / "build_report.txt"
 
 DATASET = "nci_full"
+# Which NCI screen to report on; None keeps every screen (each one then gets its
+# own rows, since runs on different screens are not comparable). Runs predating
+# the id-in-the-folder-name convention parse as dataset_id=None.
+DATASET_ID = None
 
 # Longest-first: gspan_cork before wl, wl_edge before wl.
 ENCODER_TOKENS = ["gspan_cork", "wl_edge", "fsm", "wl"]
@@ -91,6 +95,8 @@ REPEATED = {"mccv", "kfold"}
 
 DIR_RE = re.compile(
     r"^(?P<prefix>mc_cv_|kfold_)?(?P<impl>.+?)_(?P<dataset>nci_full|mutag|ptc_mr|ogbg_molhiv)"
+    # NCI screens are numbered; runs before that id was recorded have no suffix.
+    r"(?:_id(?P<dataset_id>\d+))?"
     r"(?:_(?:atoms|dim)(?P<atoms>\d+))?"
     r"_(?P<start>\d{8}_\d{6})(?:_(?P<end>\d{8}_\d{6}))?$"
 )
@@ -105,6 +111,7 @@ def parse_dirname(name: str):
 
     base = {
         "dataset": m.group("dataset"),
+        "dataset_id": int(m.group("dataset_id")) if m.group("dataset_id") else None,
         "atoms": int(m.group("atoms")) if m.group("atoms") else None,
         "run_started": m.group("start"),
         "implementation": impl,
@@ -127,6 +134,8 @@ def parse_dirname(name: str):
 
 
 def in_scope(info) -> bool:
+    if DATASET_ID is not None and info["dataset_id"] != DATASET_ID:
+        return False
     return info["dataset"] == DATASET and info["atoms"] is not None
 
 
@@ -302,7 +311,9 @@ def main() -> None:
             report.append(f"SKIP  {why:<24} {label}/{run_dir.name}")
             return
         n = repeated_n(run_dir) if info["source"] in REPEATED else 1
-        cands.setdefault((info["method"], info["atoms"]), []).append({
+        cands.setdefault(
+            (info["method"], info["atoms"], info["dataset_id"]), []
+        ).append({
             **info, "metrics": metrics, "n_seeds": n,
             "fit_seconds": repeated_fit_seconds(run_dir) if info["source"] in REPEATED else None,
             "run_id": run_dir.name,
@@ -324,13 +335,14 @@ def main() -> None:
 
     # Per-method source preference, applied before any per-cell choice.
     best_source = {}
-    for (method, _atoms), lst in cands.items():
+    for (method, _atoms, _dataset_id), lst in cands.items():
         for c in lst:
             best_source[method] = max(best_source.get(method, 0), SOURCE_RANK[c["source"]])
 
     fieldnames = (
         ["family", "method", "encoder", "dict_learner", "dict_learner_impl",
-         "implementation", "dataset", "atoms", "classifier", "source", "n_seeds", "status"]
+         "implementation", "dataset", "dataset_id", "atoms", "classifier",
+         "source", "n_seeds", "status"]
         + [c for c, _, _ in METRICS]
         + [f"{c}_std" for c in STD_METRICS]
         + ["threshold", "fit_seconds", "run_started", "run_id"]
@@ -342,7 +354,8 @@ def main() -> None:
     out_rows, filled, missing = [], [], []
 
     for family, method in methods:
-        keys = sorted((k for k in cands if k[0] == method), key=lambda k: k[1])
+        keys = sorted((k for k in cands if k[0] == method),
+                      key=lambda k: (k[1], k[2] if k[2] is not None else -1))
         rank = best_source.get(method, 0)
         emitted = False
 
@@ -373,6 +386,7 @@ def main() -> None:
                     "encoder": chosen["encoder"], "dict_learner": chosen["dict_learner"],
                     "dict_learner_impl": chosen["dict_learner_impl"],
                     "implementation": chosen["implementation"], "dataset": chosen["dataset"],
+                    "dataset_id": chosen.get("dataset_id") if chosen.get("dataset_id") is not None else "",
                     "atoms": chosen["atoms"], "classifier": arm,
                     "source": chosen["source"], "n_seeds": chosen["n_seeds"],
                     "status": classify_status(flat),

@@ -15,6 +15,43 @@ RDLogger.DisableLog("rdApp.*")
 
 DATASETS_DIR = "datasets"
 
+# NCI ships as one SDF file per screen; the number in the file name ("33" in
+# "33total-connect.sdf") identifies which screen the graphs come from, so it is
+# part of the dataset's identity and has to travel with every artefact we write.
+NCI_IDS = (1, 33, 41, 47, 81, 83, 109, 123, 145)
+DEFAULT_NCI_ID = 33
+# Datasets whose identity includes a numeric id. Everything else ignores it.
+_ID_DATASETS = {"nci_full": DEFAULT_NCI_ID}
+
+
+def resolve_dataset_id(dataset, dataset_id=None):
+    """Return the id that `dataset` will actually be loaded with, or None.
+
+    Non-NCI datasets have no id, so they always resolve to None; NCI resolves a
+    missing id to the loader default, so a run that never mentioned an id still
+    records the screen it really used.
+    """
+    default = _ID_DATASETS.get(str(dataset).lower())
+    if default is None:
+        return None
+    return int(dataset_id) if dataset_id is not None else default
+
+
+def dataset_tag(dataset, dataset_id=None):
+    """Self-describing name for folders/reports, e.g. "nci_full_id33".
+
+    Datasets without an id are returned unchanged ("mutag"), so callers can use
+    this unconditionally.
+    """
+    resolved = resolve_dataset_id(dataset, dataset_id)
+    return dataset if resolved is None else f"{dataset}_id{resolved}"
+
+
+def dataset_load_kwargs(dataset, dataset_id=None):
+    """kwargs for `GraphDataLoader.load` that pin `dataset` to `dataset_id`."""
+    resolved = resolve_dataset_id(dataset, dataset_id)
+    return {} if resolved is None else {"id": resolved}
+
 # Public download locations.
 #   * TU Dortmund graph-kernel datasets (MUTAG, PTC_MR, ...):
 #         https://chrsmrrs.github.io/datasets/docs/datasets/
@@ -158,17 +195,27 @@ class GraphDataLoader:
 
     # -- NCI ------------------------------------------------------------------
 
-    def load_nci_full(self, id=1):
+    def load_nci_full(self, id=DEFAULT_NCI_ID):
         """
         id - (1, 33, 41, 47, 81, 83, 109, 123, 145)
+
+        The id selects which NCI screen is loaded and is carried into every
+        artefact name and manifest downstream (see `dataset_tag`), so runs on
+        different screens never collide or get compared by accident.
         """
-        print('Loading NCI dataset')
+        id = int(id)
+        print(f"Loading NCI dataset (id={id})")
         DATASET_DIR = os.path.join(DATASETS_DIR, "NCI_full")
         graphs = []
         y = []
 
         filename = f"{id}total-connect.sdf"
         filepath = os.path.join(DATASET_DIR, filename)
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(
+                f"NCI screen {id} not found at {os.path.abspath(filepath)}. "
+                f"Known ids: {list(NCI_IDS)}."
+            )
 
         supplier = Chem.SDMolSupplier(filepath, removeHs=False)
         skipped = 0

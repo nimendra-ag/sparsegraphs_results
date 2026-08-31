@@ -135,7 +135,7 @@ The number of repetitions $B$ is a compute-bound parameter rather than a statist
 
 ## 9. Artefacts, Provenance and Auditability
 
-Each run writes a self-describing directory whose name encodes the implementation, the dataset, the resulting dictionary size and both the start and completion timestamps, for example `mc_cv_fsm_lcksvd_nci_full_atoms512_20260805_210537_20260805_213119`. The elapsed duration of a run is therefore legible from its directory name alone. Five artefacts are produced:
+Each run writes a self-describing directory whose name encodes the implementation, the dataset (with its id for datasets that have one, such as the NCI screen), the resulting dictionary size and both the start and completion timestamps, for example `mc_cv_fsm_lcksvd_nci_full_id33_atoms512_20260805_210537_20260805_213119`. The elapsed duration of a run is therefore legible from its directory name alone. Five artefacts are produced:
 
 - **`per_run_metrics.csv`** — one row per repetition, keyed by master seed, carrying the dictionary size and all sixty-six metric columns under self-describing `Classifier/Metric` names. This file is the single source of truth from which every summary is derived.
 - **`per_run_timings.csv`** — one row per repetition giving the wall-clock seconds spent in each pipeline phase: data loading, partitioning, encoder and dictionary fitting, sparse coding of each split, and each classifier's validation and test passes, measured individually.

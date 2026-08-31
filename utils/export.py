@@ -27,6 +27,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MaxAbsScaler
 
 from utils.evaluator import Evaluator
+from utils.graph_data import dataset_tag, resolve_dataset_id
 from utils.seeding import seed_everything
 from utils import pipeline
 from utils.artifact_store import save_bundle
@@ -44,6 +45,7 @@ def export_pipeline(
     y,
     implementation,
     dataset,
+    dataset_id=None,
     artifacts_root="artifacts",
     split_seed=42,
     save_eval=True,
@@ -51,8 +53,16 @@ def export_pipeline(
 ):
     """Fit the full pipeline on one fixed split and write a deployable bundle.
 
-    Returns the bundle directory path.
+    `dataset_id` pins datasets that ship as several numbered files (NCI's
+    screens); it is resolved to the id the graphs were actually loaded with, so
+    it lands in the bundle name and manifest even when the caller left it
+    unset. Returns the bundle directory path.
     """
+    dataset_id = resolve_dataset_id(dataset, dataset_id)
+    # Self-describing name ("nci_full_id33") used everywhere a dataset is
+    # displayed or written into a folder name; the manifest keeps the plain
+    # dataset name plus the id as separate fields.
+    tag = dataset_tag(dataset, dataset_id)
     started_at = datetime.now().strftime("%Y%m%d_%H%M%S")
     seed_everything(split_seed)
 
@@ -84,7 +94,7 @@ def export_pipeline(
     # --- classifiers on ML split; thresholds tuned on the validation split ---
     evaluator_val = Evaluator(
         X_ml_s, y_ml, X_val_s, y_val,
-        implementation=implementation, dataset=dataset, n_atoms=n_atoms,
+        implementation=implementation, dataset=tag, n_atoms=n_atoms,
         random_state=split_seed, started_at=started_at,
     )
     evaluator_val.predict_logistic_regression()
@@ -98,7 +108,7 @@ def export_pipeline(
     # --- honest held-out TEST evaluation (val-tuned thresholds reused) -------
     evaluator_test = Evaluator(
         X_ml_s, y_ml, X_test_s, y_test,
-        implementation=implementation, dataset=dataset, n_atoms=n_atoms,
+        implementation=implementation, dataset=tag, n_atoms=n_atoms,
         random_state=split_seed, fixed_thresholds=thresholds, started_at=started_at,
     )
     evaluator_test.predict_logistic_regression()
@@ -117,6 +127,7 @@ def export_pipeline(
         models=models,
         thresholds=thresholds,
         started_at=started_at,
+        dataset_id=dataset_id,
         extra_metadata={
             "split_seed": split_seed,
             "split": {"vocab_train": 0.50, "ml_train": 0.20, "val": 0.15, "test": 0.15},
@@ -135,7 +146,7 @@ def export_pipeline(
         plot_paths = plot_elbow_suite(
             selection_scores,
             analytics_dir,
-            title=f"{implementation} / {dataset}",
+            title=f"{implementation} / {tag}",
             # mirror the cut the encoder actually applied so the figure and the
             # trained vocab cannot disagree
             selection=getattr(encoder, "selection", "elbow"),
@@ -157,6 +168,7 @@ def export_pipeline(
             metadata={
                 "implementation": implementation,
                 "dataset": dataset,
+                "dataset_id": dataset_id,
                 "split_seed": split_seed,
                 "total_atoms": int(n_atoms),
             },

@@ -54,6 +54,7 @@ Extra dependencies: rdkit, networkx, scikit-learn.
 from __future__ import annotations
 
 import os
+import re
 import sys
 # Add the project root to the sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -81,6 +82,7 @@ from torch_geometric.loader import DataLoader
 from torch_geometric.nn import GCNConv, global_mean_pool
 
 from utils import mccv
+from utils.graph_data import dataset_tag
 from utils.seeding import seed_everything, derive_seeds
 
 
@@ -89,6 +91,18 @@ from utils.seeding import seed_everything, derive_seeds
 # --------------------------------------------------------------------------- #
 IMPLEMENTATION = "gcn"
 DATASET = "nci_full"
+
+
+def sdf_dataset_id(sdf_path):
+    """NCI screen id from the SDF file name ("33total-connect.sdf" -> 33).
+
+    This arm is pointed straight at an SDF rather than going through
+    GraphDataLoader, so the id has to be recovered from the path to reach the
+    folder name and manifest the way it does for every other arm. An
+    unrecognised name yields None, which simply leaves the id out.
+    """
+    m = re.match(r"(\d+)total-connect", os.path.basename(str(sdf_path)))
+    return int(m.group(1)) if m else None
 
 # Each master seed = one fully reproducible run (its own train/test partition +
 # its own model initialisation). Only the orchestrating parent reads this;
@@ -474,7 +488,8 @@ def run_seed_worker(master_seed, out_dir, args):
     mccv.append_run_row(out_dir, master_seed, args.hidden, row)
     mccv.append_timings_row(out_dir, master_seed, timings)
     mccv.append_manifest_entry(out_dir, seed_manifest,
-                               implementation=IMPLEMENTATION, dataset=DATASET)
+                               implementation=IMPLEMENTATION, dataset=DATASET,
+                               dataset_id=sdf_dataset_id(args.sdf))
 
 
 def _worker_argv(args):
@@ -500,10 +515,15 @@ def orchestrate(seeds, args):
     the surviving seeds still produce a summary.
     """
     started_at = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_dir = os.path.join("results", f"mc_cv_{IMPLEMENTATION}_{DATASET}_{started_at}")
+    # Which NCI screen this run trained on is part of its identity, so it goes
+    # in the folder name and the manifest.
+    dataset_id = sdf_dataset_id(args.sdf)
+    tag = dataset_tag(DATASET, dataset_id)
+    out_dir = os.path.join("results", f"mc_cv_{IMPLEMENTATION}_{tag}_{started_at}")
     os.makedirs(out_dir, exist_ok=True)
     print(f"Monte Carlo CV | one process per seed | out_dir={out_dir}")
-    mccv.init_manifest(out_dir, IMPLEMENTATION, DATASET, seeds, started_at)
+    mccv.init_manifest(out_dir, IMPLEMENTATION, DATASET, seeds, started_at,
+                       dataset_id=dataset_id)
 
     failed = []
     for seed in seeds:
@@ -544,7 +564,7 @@ def orchestrate(seeds, args):
     # (e.g. an open handle / antivirus lock on Windows).
     final_dir = os.path.join(
         "results",
-        f"mc_cv_{IMPLEMENTATION}_{DATASET}_atoms{total_atoms}_{started_at}_{ended_at}",
+        f"mc_cv_{IMPLEMENTATION}_{tag}_atoms{total_atoms}_{started_at}_{ended_at}",
     )
     try:
         os.rename(out_dir, final_dir)

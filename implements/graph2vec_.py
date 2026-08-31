@@ -46,12 +46,16 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 from utils.evaluator import Evaluator
-from utils.graph_data import GraphDataLoader
+from utils.graph_data import GraphDataLoader, dataset_load_kwargs, dataset_tag
 from utils.seeding import seed_everything
 from graph2vec.graph2vec import Graph2Vec
 
 
 DATASET = "nci_full"
+# NCI screen to run on (1, 33, 41, 47, 81, 83, 109, 123, 145). Carried into the
+# report folder name and header through DATASET_TAG.
+DATASET_ID = 33
+DATASET_TAG = dataset_tag(DATASET, DATASET_ID)
 IMPLEMENTATION = "graph2vec"
 
 # Seed for the graph2vec embedding, the train/test split and the classifiers.
@@ -133,7 +137,8 @@ def main():
     total_t0 = time.perf_counter()
 
     seed_everything(args.seed)
-    graphs, y = GraphDataLoader().load(DATASET)
+    graphs, y = GraphDataLoader().load(
+        DATASET, **dataset_load_kwargs(DATASET, DATASET_ID))
     y = np.array(y)
 
     X, dimensions = build_embeddings(graphs, args)
@@ -152,7 +157,7 @@ def main():
     # implements/sf_test.py, so the saved report is drop-in comparable.
     evaluator = Evaluator(
         X_train_s, y_train, X_test_s, y_test,
-        implementation=IMPLEMENTATION, dataset=DATASET,
+        implementation=IMPLEMENTATION, dataset=DATASET_TAG,
         n_atoms=dimensions, random_state=args.seed, started_at=started_at,
     )
     evaluator.predict_logistic_regression()

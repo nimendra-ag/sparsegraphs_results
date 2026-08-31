@@ -27,13 +27,18 @@ from dict_learners.aksvd import AKSVD
 
 
 DATASET = "nci_full"
+# Which NCI screen to train on (1, 33, 41, 47, 81, 83, 109, 123, 145). It is
+# recorded in the bundle's manifest and in its folder name
+# ("wl_aksvd_nci_full_id33_atoms<N>_<start>_<end>"), so bundles built on
+# different screens never overwrite or get confused with each other.
+DATASET_ID = 33
 IMPLEMENTATION = "wl_aksvd"
 EXPORT_SEED = 42
 
 
 if __name__ == "__main__":
     data_loader = GraphDataLoader()
-    graphs, y = data_loader.load(DATASET)
+    graphs, y = data_loader.load(DATASET, id=DATASET_ID)
 
     encoder = WL(seed=EXPORT_SEED)
     dict_learner = AKSVD(seed=EXPORT_SEED)
@@ -45,5 +50,6 @@ if __name__ == "__main__":
         y,
         implementation=IMPLEMENTATION,
         dataset=DATASET,
+        dataset_id=DATASET_ID,
         split_seed=EXPORT_SEED,
     )

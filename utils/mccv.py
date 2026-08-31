@@ -41,7 +41,8 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MaxAbsScaler
 
-from utils.graph_data import GraphDataLoader
+from utils.graph_data import (NCI_IDS, GraphDataLoader, dataset_load_kwargs,
+                              dataset_tag, resolve_dataset_id)
 from utils.evaluator import Evaluator
 from utils.seeding import seed_everything, derive_seeds
 from utils.src_classifier import SRCClassifier
@@ -133,10 +134,13 @@ def _phase(timings, label):
 _DATA = {}
 
 
-def _get_data(dataset):
-    if dataset not in _DATA:
-        _DATA[dataset] = GraphDataLoader().load(dataset)
-    return _DATA[dataset]
+def _get_data(dataset, dataset_id=None):
+    key = (dataset, resolve_dataset_id(dataset, dataset_id))
+    if key not in _DATA:
+        _DATA[key] = GraphDataLoader().load(
+            dataset, **dataset_load_kwargs(dataset, dataset_id)
+        )
+    return _DATA[key]
 
 
 def _flatten(prefix, metrics, keys=METRIC_KEYS):
@@ -156,7 +160,7 @@ def _flatten(prefix, metrics, keys=METRIC_KEYS):
 
 
 def run_once(master_seed, encoder_factory, dict_learner_factory,
-             implementation, dataset):
+             implementation, dataset, dataset_id=None):
     """One full pipeline execution under a single master seed.
 
     Resamples the stratified train/val/test partition, fits encoder +
@@ -174,9 +178,12 @@ def run_once(master_seed, encoder_factory, dict_learner_factory,
     """
     timings = {}  # ordered: insertion order == pipeline order
     seed_t0 = time.perf_counter()
+    # "nci_full_id33" for datasets with an id, plain name otherwise — what the
+    # evaluator prints and what the run folder is named after.
+    tag = dataset_tag(dataset, dataset_id)
 
     with _phase(timings, "data_load"):
-        graphs, y = _get_data(dataset)
+        graphs, y = _get_data(dataset, dataset_id)
 
     # Global RNGs (for libraries that read global state, e.g. gensim/sklearn),
     # plus independent sub-seeds for the components we control.
@@ -242,7 +249,7 @@ def run_once(master_seed, encoder_factory, dict_learner_factory,
     print("Tuning thresholds on the validation split...")
     evaluator_val = Evaluator(
         X_ML_train_scaled, y_ML_train, X_ML_val_scaled, y_val,
-        implementation=implementation, dataset=dataset,
+        implementation=implementation, dataset=tag,
         n_atoms=total_atoms, random_state=s_clf,
     )
     with _phase(timings, "val_logreg"):
@@ -259,7 +266,7 @@ def run_once(master_seed, encoder_factory, dict_learner_factory,
     print("Evaluating on the held-out test split...")
     evaluator_test = Evaluator(
         X_ML_train_scaled, y_ML_train, X_ML_test_scaled, y_test,
-        implementation=implementation, dataset=dataset,
+        implementation=implementation, dataset=tag,
         n_atoms=total_atoms, random_state=s_clf,
         fixed_thresholds=val_thresholds,  # reuse validation-tuned thresholds
     )
@@ -445,12 +452,15 @@ def _write_manifest(out_dir, manifest):
     return path
 
 
-def init_manifest(out_dir, implementation, dataset, seeds, started_at):
+def init_manifest(out_dir, implementation, dataset, seeds, started_at,
+                  dataset_id=None):
     """Create (or top up) the run-level header before the first worker starts."""
     manifest = _read_manifest(out_dir)
     manifest.update({
         "implementation": implementation,
         "dataset": dataset,
+        # Which NCI screen the graphs came from; None for datasets without an id.
+        "dataset_id": resolve_dataset_id(dataset, dataset_id),
         "started_at": started_at,
         "planned_seeds": [int(s) for s in seeds],
         "n_planned_seeds": len(seeds),
@@ -462,21 +472,23 @@ def init_manifest(out_dir, implementation, dataset, seeds, started_at):
     return path
 
 
-def append_manifest_entry(out_dir, entry, implementation=None, dataset=None):
+def append_manifest_entry(out_dir, entry, implementation=None, dataset=None,
+                          dataset_id=None):
     """Record one seed's provenance, replacing any earlier entry for that seed.
 
     Same last-one-wins rule as `_read_per_run`, so re-running a single seed to
     fill a gap updates its manifest entry instead of duplicating it.
 
-    `implementation`/`dataset` are setdefault-ed, not overwritten: a worker
-    invoked by hand against a fresh folder still produces an identifiable
-    manifest, while the orchestrator's header stays authoritative.
+    `implementation`/`dataset`/`dataset_id` are setdefault-ed, not overwritten:
+    a worker invoked by hand against a fresh folder still produces an
+    identifiable manifest, while the orchestrator's header stays authoritative.
     """
     manifest = _read_manifest(out_dir)
     if implementation is not None:
         manifest.setdefault("implementation", implementation)
     if dataset is not None:
         manifest.setdefault("dataset", dataset)
+        manifest.setdefault("dataset_id", resolve_dataset_id(dataset, dataset_id))
     seed = entry["master_seed"]
     manifest["runs"] = [r for r in manifest["runs"] if r.get("master_seed") != seed]
     manifest["runs"].append(entry)
@@ -661,22 +673,25 @@ def aggregate_and_report(out_dir):
 # --- Worker: run exactly one seed -------------------------------------------
 
 def run_seed_worker(master_seed, out_dir, encoder_factory, dict_learner_factory,
-                    implementation, dataset):
+                    implementation, dataset, dataset_id=None):
     """Run one seed and append its metrics, then return. Designed to be the
     whole lifetime of a subprocess so that process exit frees all RAM/VRAM."""
     print(f"\n########## Monte Carlo CV run | master_seed={master_seed} ##########")
     row, total_atoms, timings, seed_manifest = run_once(
-        master_seed, encoder_factory, dict_learner_factory, implementation, dataset
+        master_seed, encoder_factory, dict_learner_factory, implementation,
+        dataset, dataset_id=dataset_id,
     )
     append_run_row(out_dir, master_seed, total_atoms, row)
     append_timings_row(out_dir, master_seed, timings)
     append_manifest_entry(out_dir, seed_manifest,
-                          implementation=implementation, dataset=dataset)
+                          implementation=implementation, dataset=dataset,
+                          dataset_id=dataset_id)
 
 
 # --- Orchestrator: one process per seed -------------------------------------
 
-def orchestrate(seeds, worker_script, implementation, dataset, fail_fast=False):
+def orchestrate(seeds, worker_script, implementation, dataset, fail_fast=False,
+                dataset_id=None):
     """Spawn one fresh subprocess per seed (sequentially), then aggregate.
 
     Each subprocess fully exits before the next starts, so the OS reclaims all
@@ -692,21 +707,26 @@ def orchestrate(seeds, worker_script, implementation, dataset, fail_fast=False):
     reporting a hollow success.
     """
     started_at = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # The dataset id (NCI screen) is part of the run's identity, so it goes in
+    # the folder name as well as the manifest.
+    tag = dataset_tag(dataset, dataset_id)
     out_dir = os.path.join(
-        "results", f"mc_cv_{implementation}_{dataset}_{started_at}"
+        "results", f"mc_cv_{implementation}_{tag}_{started_at}"
     )
     os.makedirs(out_dir, exist_ok=True)
     print(f"Monte Carlo CV | one process per seed | out_dir={out_dir}")
-    init_manifest(out_dir, implementation, dataset, seeds, started_at)
+    init_manifest(out_dir, implementation, dataset, seeds, started_at,
+                  dataset_id=dataset_id)
 
     failed = []
     for seed in seeds:
         print(f"\n>>> launching worker for master_seed={seed} ...")
         # Inherit stdout/stderr so the ~4h worker logs stream live.
-        result = subprocess.run(
-            [sys.executable, os.path.abspath(worker_script),
-             "--seed", str(seed), "--out-dir", out_dir],
-        )
+        worker_cmd = [sys.executable, os.path.abspath(worker_script),
+                      "--seed", str(seed), "--out-dir", out_dir]
+        if dataset_id is not None:
+            worker_cmd += ["--dataset-id", str(dataset_id)]
+        result = subprocess.run(worker_cmd)
         if result.returncode != 0:
             msg = f"seed={seed} FAILED (exit code {result.returncode})"
             if fail_fast:
@@ -738,7 +758,7 @@ def orchestrate(seeds, worker_script, implementation, dataset, fail_fast=False):
     # rename failure (e.g. an open handle / antivirus lock on Windows).
     final_dir = os.path.join(
         "results",
-        f"mc_cv_{implementation}_{dataset}_atoms{total_atoms}_{started_at}_{ended_at}",
+        f"mc_cv_{implementation}_{tag}_atoms{total_atoms}_{started_at}_{ended_at}",
     )
     try:
         os.rename(out_dir, final_dir)
@@ -750,7 +770,7 @@ def orchestrate(seeds, worker_script, implementation, dataset, fail_fast=False):
 # --- CLI entry point ---------------------------------------------------------
 
 def main(encoder_factory, dict_learner_factory, implementation, dataset,
-         worker_script, master_seeds=None, argv=None):
+         worker_script, master_seeds=None, argv=None, dataset_id=None):
     """The `if __name__ == "__main__"` body every MC-CV script shares.
 
     Three modes, selected by the flags below: orchestrate the whole run
@@ -773,11 +793,20 @@ def main(encoder_factory, dict_learner_factory, implementation, dataset,
         help="Aggregate an existing --out-dir into summary_mean_std.csv and exit.",
     )
     parser.add_argument(
+        "--dataset-id", type=int, default=None,
+        help="Dataset id for datasets that ship as numbered files (NCI screen, "
+             "e.g. --dataset-id 41). Default: the script's own setting, else "
+             f"the loader default. Known NCI ids: {list(NCI_IDS)}.",
+    )
+    parser.add_argument(
         "--fail-fast", action="store_true",
         help="Abort the whole run on the first seed failure "
              "(default: skip the failed seed and continue).",
     )
     args = parser.parse_args(argv)
+    # CLI wins over the calling script's constant; both fall back to the
+    # loader's own default (which `resolve_dataset_id` pins down explicitly).
+    dataset_id = args.dataset_id if args.dataset_id is not None else dataset_id
 
     if args.aggregate:
         if not args.out_dir:
@@ -789,9 +818,10 @@ def main(encoder_factory, dict_learner_factory, implementation, dataset,
         run_seed_worker(
             args.seed, args.out_dir,
             encoder_factory, dict_learner_factory, implementation, dataset,
+            dataset_id=dataset_id,
         )
     else:
         # Default: orchestrate one process per seed.
         seeds = master_seeds if master_seeds is not None else default_master_seeds()
         orchestrate(seeds, worker_script, implementation, dataset,
-                    fail_fast=args.fail_fast)
+                    fail_fast=args.fail_fast, dataset_id=dataset_id)
