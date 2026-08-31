@@ -1,0 +1,92 @@
+{
+  "implementation": "wl_fddl_gpu",
+  "dataset": "nci_full",
+  "dataset_id": 33,
+  "started_at": "20260831_014438",
+  "planned_seeds": [
+    5,
+    82
+  ],
+  "n_planned_seeds": 2,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "completed_seeds": [
+    5,
+    82
+  ],
+  "n_completed_seeds": 2,
+  "missing_seeds": [],
+  "selected_features_summary": {
+    "per_seed": {
+      "5": 1755,
+      "82": 1780
+    },
+    "mean": 1767.5,
+    "std_ddof1": 17.68,
+    "min": 1755,
+    "max": 1780,
+    "n": 2
+  },
+  "updated_at": "2026-08-31T01:50:40",
+  "total_atoms": 256,
+  "failed_seeds": [],
+  "ended_at": "20260831_015040",
+  "runs": [
+    {
+      "master_seed": 5,
+      "n_selected_features": 1755,
+      "n_scored_features": 10130,
+      "selection": "energy",
+      "energy": 0.99,
+      "min_features": 50,
+      "total_atoms": 256,
+      "encoder_class": "WL",
+      "dict_learner_class": "FDDLGPU",
+      "derived_seeds": {
+        "split": 16823399,
+        "encoder": 2940995229,
+        "dict_learner": 2290007392,
+        "classifier": 1039507385
+      },
+      "split_sizes": {
+        "vocab_train": 18302,
+        "ml_train": 7322,
+        "val": 5491,
+        "test": 5492
+      },
+      "completed_at": "2026-08-31T01:47:02",
+      "kept_fraction": 0.173248,
+      "seed_total_sec": 175.385
+    },
+    {
+      "master_seed": 82,
+      "n_selected_features": 1780,
+      "n_scored_features": 9958,
+      "selection": "energy",
+      "energy": 0.99,
+      "min_features": 50,
+      "total_atoms": 256,
+      "encoder_class": "WL",
+      "dict_learner_class": "FDDLGPU",
+      "derived_seeds": {
+        "split": 1578610759,
+        "encoder": 2050583056,
+        "dict_learner": 1808250336,
+        "classifier": 2999519759
+      },
+      "split_sizes": {
+        "vocab_train": 18302,
+        "ml_train": 7322,
+        "val": 5491,
+        "test": 5492
+      },
+      "completed_at": "2026-08-31T01:50:03",
+      "kept_fraction": 0.178751,
+      "seed_total_sec": 177.088
+    }
+  ]
+}

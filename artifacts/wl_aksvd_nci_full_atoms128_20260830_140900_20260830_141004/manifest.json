@@ -1,0 +1,37 @@
+{
+  "implementation": "wl_aksvd",
+  "dataset": "nci_full",
+  "started_at": "20260830_140900",
+  "ended_at": "20260830_141004",
+  "created_at": "2026-08-30T14:10:04",
+  "encoder_class": "WL",
+  "dict_learner_class": "AKSVD",
+  "n_atoms": 128,
+  "feature_dim": 1633,
+  "classes": null,
+  "models": {
+    "Logistic Regression": "models\\model_logistic_regression.joblib",
+    "Gradient Boosting": "models\\model_gradient_boosting.joblib",
+    "Linear SVM": "models\\model_linear_svm.joblib",
+    "Random Forest": "models\\model_random_forest.joblib"
+  },
+  "default_model": "Logistic Regression",
+  "git_commit": "40f40d3952c22d88a57ae0b6e83afdffe84bcf75",
+  "library_versions": {
+    "numpy": "1.22.3",
+    "scipy": "1.11.4",
+    "sklearn": "1.0.2",
+    "torch": "2.8.0+cu128",
+    "joblib": "1.1.0"
+  },
+  "extra": {
+    "split_seed": 42,
+    "split": {
+      "vocab_train": 0.5,
+      "ml_train": 0.2,
+      "val": 0.15,
+      "test": 0.15
+    },
+    "note": "Headline performance is the MC-CV mean +/- std; the eval/ metrics here are this single instance's held-out test."
+  }
+}
