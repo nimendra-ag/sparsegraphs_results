@@ -1,0 +1,40 @@
+{
+  "implementation": "wl_frozen_ksvd_gpu",
+  "dataset": "nci_full",
+  "started_at": "20260830_225224",
+  "ended_at": "20260830_225313",
+  "created_at": "2026-08-30T22:53:13",
+  "encoder_class": "WL",
+  "dict_learner_class": "FrozenKSVDLearnerGPU",
+  "n_atoms": 1024,
+  "feature_dim": 1714,
+  "classes": [
+    -1,
+    1
+  ],
+  "models": {
+    "Logistic Regression": "models\\model_logistic_regression.joblib",
+    "Gradient Boosting": "models\\model_gradient_boosting.joblib",
+    "Linear SVM": "models\\model_linear_svm.joblib",
+    "Random Forest": "models\\model_random_forest.joblib"
+  },
+  "default_model": "Logistic Regression",
+  "git_commit": "726ad32898da154d4884880090a6fa9fa9f06958",
+  "library_versions": {
+    "numpy": "2.5.2",
+    "scipy": "1.18.0",
+    "sklearn": "1.9.0",
+    "torch": "2.13.0+cu130",
+    "joblib": "1.5.3"
+  },
+  "extra": {
+    "split_seed": 42,
+    "split": {
+      "vocab_train": 0.5,
+      "ml_train": 0.2,
+      "val": 0.15,
+      "test": 0.15
+    },
+    "note": "Headline performance is the MC-CV mean +/- std; the eval/ metrics here are this single instance's held-out test."
+  }
+}

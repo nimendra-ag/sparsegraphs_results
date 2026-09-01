@@ -1,0 +1,14 @@
+{
+  "class": "FrozenKSVDLearnerGPU",
+  "name": "FrozenKSVDGPU",
+  "n_components_base": 1536,
+  "n_components_residual": 512,
+  "max_iter": 10,
+  "tol": 1e-06,
+  "n_non_zero_coefs": 10,
+  "base_label": -1,
+  "dtype": "float32",
+  "batch_size": null,
+  "seed": 42,
+  "device": "cuda"
+}

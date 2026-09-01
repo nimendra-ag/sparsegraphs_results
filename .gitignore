@@ -19,3 +19,12 @@ artifacts/wl_edge_aksvd_*/dict_learner/aksvd_dictionary.npy
 # The learned lcksvd_dictionary.npy (55MB) stays tracked -- only the resumable
 # solver state is dropped, so runs stay reproducible from the dictionary alone.
 artifacts/wl_lcksvd_*/dict_learner/lcksvd_state.npz
+
+# wl_edge frozen K-SVD GPU dictionaries: up to 1.3GB for large atom counts,
+# over GitHub's 100MB hard limit. Ignored for the whole run family (like
+# wl_edge_aksvd_* above) rather than by atom count.
+artifacts/wl_edge_frozen_ksvd_gpu_*/dict_learner/frozen_ksvd_gpu_dictionary.npy
+
+# wl_edge FDDL GPU dictionaries: up to 263MB for large atom counts, over
+# GitHub's 100MB hard limit.
+artifacts/wl_edge_fddl_gpu_*/dict_learner/fddl_D.npy
