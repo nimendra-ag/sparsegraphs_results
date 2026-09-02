@@ -1,0 +1,8 @@
+{
+  "implementation": "wl_csfddl_gpu",
+  "dataset": "nci_full",
+  "dataset_id": 41,
+  "split_seed": 42,
+  "total_atoms": 4096,
+  "note": "Raw pre-scale sparse codes. Valid only for the dictionary that produced them; re-encode if WL/dictionary params change."
+}
