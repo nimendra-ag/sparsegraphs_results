@@ -1,0 +1,13 @@
+{
+  "class": "EdgeWL",
+  "name": "ImbalanceAwareEdgeWL",
+  "wl_iterations": 2,
+  "attributed": true,
+  "erase_base_features": true,
+  "n_vocab": 17025,
+  "min_features": 50,
+  "selection": "energy",
+  "energy": 0.99,
+  "seed": 42,
+  "hash_scheme": "builtin-salted"
+}
