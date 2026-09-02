@@ -26,14 +26,20 @@ from graph_encoders.wl import WL
 from dict_learners.fddl_gpu import FDDLGPU
 
 
-DATASET = "nci_full"
+DATASET = "nci_balanced"
+# Which NCI screen to train on (1, 33, 41, 47, 81, 83, 109, 123, 145). It is
+# recorded in the bundle's manifest and in its folder name
+# ("wl_fddl_gpu_nci_balanced_id1_atoms<N>_<start>_<end>"), so bundles built on
+# different screens — or on the full vs the balanced variant — never overwrite
+# or get confused with each other.
+DATASET_ID = 1
 IMPLEMENTATION = "wl_fddl_gpu"
 EXPORT_SEED = 42
 
 
 if __name__ == "__main__":
     data_loader = GraphDataLoader()
-    graphs, y = data_loader.load(DATASET)
+    graphs, y = data_loader.load(DATASET, id=DATASET_ID)
 
     encoder = WL(seed=EXPORT_SEED)
     dict_learner = FDDLGPU(seed=EXPORT_SEED)
@@ -45,5 +51,6 @@ if __name__ == "__main__":
         y,
         implementation=IMPLEMENTATION,
         dataset=DATASET,
+        dataset_id=DATASET_ID,
         split_seed=EXPORT_SEED,
     )

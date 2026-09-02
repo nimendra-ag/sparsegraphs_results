@@ -34,14 +34,15 @@ from graph_encoders.wl_edge import EdgeWL
 from dict_learners.fddl_gpu import FDDLGPU
 
 
-DATASET = "nci_full"
+DATASET = "nci_balanced"
+DATASET_ID = 1
 IMPLEMENTATION = "wl_edge_fddl_gpu"
 EXPORT_SEED = 42
 
 
 if __name__ == "__main__":
     data_loader = GraphDataLoader()
-    graphs, y = data_loader.load(DATASET)
+    graphs, y = data_loader.load(DATASET, id=DATASET_ID)
 
     encoder = EdgeWL(seed=EXPORT_SEED)
     dict_learner = FDDLGPU(seed=EXPORT_SEED)
@@ -53,5 +54,6 @@ if __name__ == "__main__":
         y,
         implementation=IMPLEMENTATION,
         dataset=DATASET,
+        dataset_id=DATASET_ID,
         split_seed=EXPORT_SEED,
     )

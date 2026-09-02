@@ -94,7 +94,7 @@ SOURCE_RANK = {"mccv": 3, "kfold": 2, "artifact": 1}
 REPEATED = {"mccv", "kfold"}
 
 DIR_RE = re.compile(
-    r"^(?P<prefix>mc_cv_|kfold_)?(?P<impl>.+?)_(?P<dataset>nci_full|mutag|ptc_mr|ogbg_molhiv)"
+    r"^(?P<prefix>mc_cv_|kfold_)?(?P<impl>.+?)_(?P<dataset>nci_full|nci_balanced|mutag|ptc_mr|ogbg_molhiv)"
     # NCI screens are numbered; runs before that id was recorded have no suffix.
     r"(?:_id(?P<dataset_id>\d+))?"
     r"(?:_(?:atoms|dim)(?P<atoms>\d+))?"

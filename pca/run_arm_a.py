@@ -61,7 +61,8 @@ def main():
         description="Arm A: WL (no feature cut) -> PCA -> FDDL, single split."
     )
     parser.add_argument("--dataset", default="nci_full",
-                        choices=["nci_full", "mutag", "ptc_mr", "ogbg_molhiv"])
+                        choices=["nci_full", "nci_balanced", "mutag", "ptc_mr",
+                                 "ogbg_molhiv"])
     parser.add_argument("--dim", type=int, default=None,
                         help="Fixed PCA width. Mutually exclusive with --pca-energy.")
     parser.add_argument("--pca-energy", type=float, default=None,

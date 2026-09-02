@@ -41,7 +41,8 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MaxAbsScaler
 
-from utils.graph_data import (NCI_IDS, GraphDataLoader, dataset_load_kwargs,
+from utils.graph_data import (NCI_IDS, GraphDataLoader, available_datasets,
+                              dataset_load_kwargs,
                               dataset_tag, resolve_dataset_id)
 from utils.evaluator import Evaluator
 from utils.seeding import seed_everything, derive_seeds
@@ -723,7 +724,11 @@ def orchestrate(seeds, worker_script, implementation, dataset, fail_fast=False,
         print(f"\n>>> launching worker for master_seed={seed} ...")
         # Inherit stdout/stderr so the ~4h worker logs stream live.
         worker_cmd = [sys.executable, os.path.abspath(worker_script),
-                      "--seed", str(seed), "--out-dir", out_dir]
+                      "--seed", str(seed), "--out-dir", out_dir,
+                      # Forwarded explicitly: a worker must train on exactly the
+                      # dataset this run was named after, not on whatever its
+                      # own DATASET constant happens to say.
+                      "--dataset", dataset]
         if dataset_id is not None:
             worker_cmd += ["--dataset-id", str(dataset_id)]
         result = subprocess.run(worker_cmd)
@@ -793,6 +798,12 @@ def main(encoder_factory, dict_learner_factory, implementation, dataset,
         help="Aggregate an existing --out-dir into summary_mean_std.csv and exit.",
     )
     parser.add_argument(
+        "--dataset", type=str, default=None, choices=available_datasets(),
+        help="Dataset to run on, overriding the script's own DATASET constant "
+             "(e.g. --dataset nci_balanced). It lands in the run folder name "
+             "and manifest, so full and balanced runs never mix.",
+    )
+    parser.add_argument(
         "--dataset-id", type=int, default=None,
         help="Dataset id for datasets that ship as numbered files (NCI screen, "
              "e.g. --dataset-id 41). Default: the script's own setting, else "
@@ -807,6 +818,7 @@ def main(encoder_factory, dict_learner_factory, implementation, dataset,
     # CLI wins over the calling script's constant; both fall back to the
     # loader's own default (which `resolve_dataset_id` pins down explicitly).
     dataset_id = args.dataset_id if args.dataset_id is not None else dataset_id
+    dataset = args.dataset if args.dataset is not None else dataset
 
     if args.aggregate:
         if not args.out_dir:
