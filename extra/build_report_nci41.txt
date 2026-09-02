@@ -1,0 +1,20 @@
+rows written        : 46  -> extra\all_results_nci41.csv
+  source=mccv      : 0
+  source=kfold     : 0
+  source=artifact  : 16
+  source=missing   : 30
+methods filled      : 1 / 31
+methods empty       : ['wl+fddl', 'wl+csfddl', 'wl+aksvd', 'wl+lcksvd', 'wl+online_dl', 'wl+bayesian', 'wl_edge+fddl', 'wl_edge+csfddl', 'wl_edge+aksvd', 'wl_edge+lcksvd', 'wl_edge+online_dl', 'wl_edge+frozen_ksvd', 'wl_edge+bayesian', 'fsm+fddl', 'fsm+csfddl', 'fsm+aksvd', 'fsm+lcksvd', 'fsm+online_dl', 'fsm+frozen_ksvd', 'fsm+bayesian', 'gspan_cork+fddl', 'gspan_cork+csfddl', 'gspan_cork+aksvd', 'gspan_cork+lcksvd', 'gspan_cork+online_dl', 'gspan_cork+frozen_ksvd', 'gspan_cork+bayesian', 'sf', 'graph2vec', 'gcn']
+degenerate rows     : 0
+
+notes / skips / dedup decisions:
+SKIP  unparsed dirname     results/mc_cv_wl_pca16_fddl_gpu_mutag_atoms32_20260726_123317_20260726_123345
+SKIP  unparsed dirname     results/mc_cv_wl_pca32_fddl_gpu_mutag_atoms32_20260726_122509_20260726_122528
+SKIP  unparsed dirname     results/mc_cv_wl_pca32_fddl_gpu_mutag_atoms32_20260726_123233_20260726_123301
+SKIP  unparsed dirname     artifacts/energy_cut_cdf_explainer
+SKIP  unparsed dirname     artifacts/wl_min_count_aksvd_nci_full_atoms64_20260814_140554_20260814_140726
+SKIP  unparsed dirname     artifacts/wl_min_count_aksvd_nci_full_atoms64_20260814_140815_20260814_140924
+SKIP  unparsed dirname     artifacts/wl_min_count_aksvd_nci_full_atoms64_20260814_140953_20260814_141052
+SKIP  unparsed dirname     artifacts/wl_pca1751_fddl_gpu_nci_full_atoms4096_20260726_231930_20260727_010242
+SKIP  unparsed dirname     artifacts/wl_pca1751_fddl_gpu_nci_full_atoms512_20260726_195150_20260726_195832
+SKIP  unparsed dirname     artifacts/wl_pca32_fddl_gpu_mutag_atoms32_20260726_122324_20260726_122326

@@ -54,7 +54,7 @@ from graph2vec.graph2vec import Graph2Vec
 DATASET = "nci_full"
 # NCI screen to run on (1, 33, 41, 47, 81, 83, 109, 123, 145). Carried into the
 # report folder name and header through DATASET_TAG.
-DATASET_ID = 33
+DATASET_ID = 41
 DATASET_TAG = dataset_tag(DATASET, DATASET_ID)
 IMPLEMENTATION = "graph2vec"
 

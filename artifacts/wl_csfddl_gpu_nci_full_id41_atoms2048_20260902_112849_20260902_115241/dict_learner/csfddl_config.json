@@ -1,0 +1,14 @@
+{
+  "class": "CSFDDLGPU",
+  "name": "CSFDDLGPU",
+  "k": 1024,
+  "lambda1": 0.1,
+  "lambda2": 0.1,
+  "eta": 1.0,
+  "max_iter": 64,
+  "lr": 0.01,
+  "ipm_iters": 15,
+  "weighting": "inverse_freq",
+  "effective_number_beta": 0.9999,
+  "seed": 42
+}
