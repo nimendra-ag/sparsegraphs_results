@@ -1,10 +1,10 @@
-rows written        : 46  -> extra\all_results_nci41.csv
+rows written        : 98  -> extra\all_results_nci41.csv
   source=mccv      : 0
-  source=kfold     : 0
-  source=artifact  : 16
-  source=missing   : 30
-methods filled      : 1 / 31
-methods empty       : ['wl+fddl', 'wl+csfddl', 'wl+aksvd', 'wl+lcksvd', 'wl+online_dl', 'wl+bayesian', 'wl_edge+fddl', 'wl_edge+csfddl', 'wl_edge+aksvd', 'wl_edge+lcksvd', 'wl_edge+online_dl', 'wl_edge+frozen_ksvd', 'wl_edge+bayesian', 'fsm+fddl', 'fsm+csfddl', 'fsm+aksvd', 'fsm+lcksvd', 'fsm+online_dl', 'fsm+frozen_ksvd', 'fsm+bayesian', 'gspan_cork+fddl', 'gspan_cork+csfddl', 'gspan_cork+aksvd', 'gspan_cork+lcksvd', 'gspan_cork+online_dl', 'gspan_cork+frozen_ksvd', 'gspan_cork+bayesian', 'sf', 'graph2vec', 'gcn']
+  source=kfold     : 4
+  source=artifact  : 68
+  source=missing   : 26
+methods filled      : 5 / 31
+methods empty       : ['wl+aksvd', 'wl+lcksvd', 'wl+online_dl', 'wl+bayesian', 'wl_edge+fddl', 'wl_edge+csfddl', 'wl_edge+aksvd', 'wl_edge+lcksvd', 'wl_edge+online_dl', 'wl_edge+frozen_ksvd', 'wl_edge+bayesian', 'fsm+fddl', 'fsm+csfddl', 'fsm+aksvd', 'fsm+lcksvd', 'fsm+online_dl', 'fsm+frozen_ksvd', 'fsm+bayesian', 'gspan_cork+fddl', 'gspan_cork+csfddl', 'gspan_cork+aksvd', 'gspan_cork+lcksvd', 'gspan_cork+online_dl', 'gspan_cork+frozen_ksvd', 'gspan_cork+bayesian', 'gcn']
 degenerate rows     : 0
 
 notes / skips / dedup decisions:
