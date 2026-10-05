@@ -1,0 +1,3 @@
+master_seed,data_load,partition,fit_encoder_dict,sparse_codes_train,sparse_codes_val,sparse_codes_test,val_logreg,val_gboost,val_svm,val_rf,test_logreg,test_gboost,test_svm,test_rf,src_embeddings,src_pure,src_fddl,seed_total
+100,4.367,0.016,235.104,3.454,2.948,2.959,1.268,150.479,23.456,4.541,1.894,149.909,23.549,4.538,0.778,33.846,35.999,679.237
+63,4.356,0.015,233.156,3.492,2.972,2.994,1.069,149.070,20.719,4.176,2.123,145.580,20.610,4.161,0.753,31.195,31.425,657.982
