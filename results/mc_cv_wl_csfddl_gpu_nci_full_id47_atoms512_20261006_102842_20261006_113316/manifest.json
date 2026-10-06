@@ -1,0 +1,179 @@
+{
+  "implementation": "wl_csfddl_gpu",
+  "dataset": "nci_full",
+  "dataset_id": 47,
+  "started_at": "20261006_102842",
+  "planned_seeds": [
+    65,
+    18,
+    5,
+    47,
+    6
+  ],
+  "n_planned_seeds": 5,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "completed_seeds": [
+    5,
+    6,
+    18,
+    47,
+    65
+  ],
+  "n_completed_seeds": 5,
+  "missing_seeds": [],
+  "selected_features_summary": {
+    "per_seed": {
+      "5": 1686,
+      "6": 1607,
+      "18": 1646,
+      "47": 1714,
+      "65": 1712
+    },
+    "mean": 1673.0,
+    "std_ddof1": 45.98,
+    "min": 1607,
+    "max": 1714,
+    "n": 5
+  },
+  "updated_at": "2026-10-06T11:33:16",
+  "total_atoms": 512,
+  "failed_seeds": [],
+  "ended_at": "20261006_113316",
+  "runs": [
+    {
+      "master_seed": 5,
+      "n_selected_features": 1686,
+      "n_scored_features": 10036,
+      "selection": "energy",
+      "energy": 0.99,
+      "min_features": 50,
+      "total_atoms": 512,
+      "encoder_class": "WL",
+      "dict_learner_class": "CSFDDLGPU",
+      "derived_seeds": {
+        "split": 16823399,
+        "encoder": 2940995229,
+        "dict_learner": 2290007392,
+        "classifier": 1039507385
+      },
+      "split_sizes": {
+        "vocab_train": 18427,
+        "ml_train": 7372,
+        "val": 5529,
+        "test": 5529
+      },
+      "completed_at": "2026-10-06T11:00:28",
+      "kept_fraction": 0.167995,
+      "seed_total_sec": 739.167
+    },
+    {
+      "master_seed": 6,
+      "n_selected_features": 1607,
+      "n_scored_features": 10054,
+      "selection": "energy",
+      "energy": 0.99,
+      "min_features": 50,
+      "total_atoms": 512,
+      "encoder_class": "WL",
+      "dict_learner_class": "CSFDDLGPU",
+      "derived_seeds": {
+        "split": 3060664978,
+        "encoder": 1271110402,
+        "dict_learner": 2536707090,
+        "classifier": 848616672
+      },
+      "split_sizes": {
+        "vocab_train": 18427,
+        "ml_train": 7372,
+        "val": 5529,
+        "test": 5529
+      },
+      "completed_at": "2026-10-06T11:25:24",
+      "kept_fraction": 0.159837,
+      "seed_total_sec": 744.484
+    },
+    {
+      "master_seed": 18,
+      "n_selected_features": 1646,
+      "n_scored_features": 10017,
+      "selection": "energy",
+      "energy": 0.99,
+      "min_features": 50,
+      "total_atoms": 512,
+      "encoder_class": "WL",
+      "dict_learner_class": "CSFDDLGPU",
+      "derived_seeds": {
+        "split": 387592216,
+        "encoder": 3903267587,
+        "dict_learner": 654749788,
+        "classifier": 103865575
+      },
+      "split_sizes": {
+        "vocab_train": 18427,
+        "ml_train": 7372,
+        "val": 5529,
+        "test": 5529
+      },
+      "completed_at": "2026-10-06T10:47:20",
+      "kept_fraction": 0.164321,
+      "seed_total_sec": 731.828
+    },
+    {
+      "master_seed": 47,
+      "n_selected_features": 1714,
+      "n_scored_features": 10167,
+      "selection": "energy",
+      "energy": 0.99,
+      "min_features": 50,
+      "total_atoms": 512,
+      "encoder_class": "WL",
+      "dict_learner_class": "CSFDDLGPU",
+      "derived_seeds": {
+        "split": 2604516273,
+        "encoder": 327201354,
+        "dict_learner": 4137274756,
+        "classifier": 2479573875
+      },
+      "split_sizes": {
+        "vocab_train": 18427,
+        "ml_train": 7372,
+        "val": 5529,
+        "test": 5529
+      },
+      "completed_at": "2026-10-06T11:12:39",
+      "kept_fraction": 0.168585,
+      "seed_total_sec": 711.216
+    },
+    {
+      "master_seed": 65,
+      "n_selected_features": 1712,
+      "n_scored_features": 10078,
+      "selection": "energy",
+      "energy": 0.99,
+      "min_features": 50,
+      "total_atoms": 512,
+      "encoder_class": "WL",
+      "dict_learner_class": "CSFDDLGPU",
+      "derived_seeds": {
+        "split": 2375597883,
+        "encoder": 2913137614,
+        "dict_learner": 2656278424,
+        "classifier": 1970491977
+      },
+      "split_sizes": {
+        "vocab_train": 18427,
+        "ml_train": 7372,
+        "val": 5529,
+        "test": 5529
+      },
+      "completed_at": "2026-10-06T10:35:04",
+      "kept_fraction": 0.169875,
+      "seed_total_sec": 831.196
+    }
+  ]
+}
