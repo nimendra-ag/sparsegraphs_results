@@ -1,0 +1,17 @@
+dataset,quantity,atoms_from,atoms_to,loglog_slope
+NCI1,seed_total,128,4096,0.714
+NCI1,fit_encoder_dict,128,4096,0.686
+NCI1,seed_total,512,4096,0.887
+NCI1,fit_encoder_dict,512,4096,0.852
+NCI33,seed_total,128,4096,0.72
+NCI33,fit_encoder_dict,128,4096,0.693
+NCI33,seed_total,512,4096,0.896
+NCI33,fit_encoder_dict,512,4096,0.855
+NCI41,seed_total,128,2048,0.646
+NCI41,fit_encoder_dict,128,2048,0.657
+NCI41,seed_total,512,2048,0.842
+NCI41,fit_encoder_dict,512,2048,0.884
+NCI47,seed_total,128,2048,0.639
+NCI47,fit_encoder_dict,128,2048,0.631
+NCI47,seed_total,512,2048,0.823
+NCI47,fit_encoder_dict,512,2048,0.848

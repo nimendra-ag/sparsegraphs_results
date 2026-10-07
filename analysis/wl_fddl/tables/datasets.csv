@@ -1,0 +1,5 @@
+dataset,split_vocab_train,split_ml_train,split_test,RandomForest_MCC_mean_128_2048,RandomForest_MacroF1_mean_128_2048,LogisticRegression_MCC_mean_128_2048,LogisticRegression_MacroF1_mean_128_2048,SRC_pure_MCC_mean_128_2048,SRC_pure_MacroF1_mean_128_2048,LinearSVM_MCC_mean_128_2048,LinearSVM_MacroF1_mean_128_2048,GradientBoosting_MCC_mean_128_2048,GradientBoosting_MacroF1_mean_128_2048,RandomForest_MCC_rank,LogisticRegression_MCC_rank,SRC_pure_MCC_rank,LinearSVM_MCC_rank,GradientBoosting_MCC_rank
+NCI1,18467,7388,5541,0.4507,0.7247,0.3844,0.6908,0.2849,0.5996,0.3861,0.691,0.3656,0.6813,1,1,2,1,2
+NCI33,18302,7322,5492,0.4243,0.7106,0.354,0.6755,0.2615,0.5898,0.3593,0.6776,0.3396,0.6683,4,4,4,4,4
+NCI41,12606,5043,3783,0.4466,0.7217,0.3776,0.687,0.2892,0.5914,0.3848,0.6907,0.3781,0.6874,2,2,1,2,1
+NCI47,18427,7372,5529,0.4353,0.7153,0.3734,0.6853,0.2741,0.5916,0.3762,0.6865,0.3544,0.6758,3,3,3,3,3

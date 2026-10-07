@@ -1,0 +1,19 @@
+wl_fddl runs found: 23  ->  22 combinations, 132 rows
+
+Coverage (runs per combination, '-' = not recorded):
+atoms    NCI1     NCI33    NCI41    NCI47    
+128      1        1        1        1        
+256      1        1        1        1        
+512      1        1        1        1        
+1024     1        1        1        1        
+2048     2        1        1        1        
+4096     1        1        -        -        
+
+Combinations with >1 run (averaged over all their seeds):
+  NCI1 atoms2048: mc_cv_wl_fddl_gpu_nci_full_id1_atoms2048_20260930_105750_20260930_112448, mc_cv_wl_fddl_gpu_nci_full_id1_atoms2048_20261001_004449_20261001_011147
+
+Skipped folders:
+  none
+
+Consistency checks (manifest + per-seed vs summary means):
+  all passed
