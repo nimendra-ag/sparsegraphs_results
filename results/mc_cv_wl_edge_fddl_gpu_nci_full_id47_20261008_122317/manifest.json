@@ -1,0 +1,19 @@
+{
+  "implementation": "wl_edge_fddl_gpu",
+  "dataset": "nci_full",
+  "dataset_id": 47,
+  "started_at": "20261008_122317",
+  "planned_seeds": [
+    83,
+    96,
+    55
+  ],
+  "n_planned_seeds": 3,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "runs": []
+}

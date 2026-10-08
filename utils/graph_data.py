@@ -14,7 +14,7 @@ DATASETS_DIR = "datasets"
 
 
 NCI_IDS = (1, 33, 41, 47, 81, 83, 109, 123, 145)
-DEFAULT_NCI_ID = 41
+DEFAULT_NCI_ID = 47
 
 # NCI ships in two variants covering the same nine screens, each with its own
 # directory and file-naming convention:
