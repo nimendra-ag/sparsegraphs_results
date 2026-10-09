@@ -17,10 +17,10 @@ from utils.seeding import seed_everything
 from sf.sf import SF
 
 
-DATASET = "nci_balanced"
+DATASET = "nci_full"
 # NCI screen to run on (1, 33, 41, 47, 81, 83, 109, 123, 145). Recorded in the
 # run manifest and in the folder name via DATASET_TAG.
-DATASET_ID = 1
+DATASET_ID = 47
 DATASET_TAG = dataset_tag(DATASET, DATASET_ID)
 IMPLEMENTATION = "sf"
 

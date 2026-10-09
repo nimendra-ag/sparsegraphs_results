@@ -44,7 +44,7 @@ from graph2vec.graph2vec import Graph2Vec
 
 
 DATASET = "nci_full"
-DATASET_ID = 1
+DATASET_ID = 47
 IMPLEMENTATION = "graph2vec"
 
 MASTER_SEEDS = mccv.default_master_seeds()
