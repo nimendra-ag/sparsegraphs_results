@@ -1,0 +1,155 @@
+{
+  "implementation": "wl_frozen_ksvd_gpu",
+  "dataset": "nci_full",
+  "dataset_id": 1,
+  "started_at": "20261009_111449",
+  "planned_seeds": [
+    66,
+    17,
+    43,
+    15,
+    86
+  ],
+  "n_planned_seeds": 5,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "completed_seeds": [
+    17,
+    43,
+    66,
+    86
+  ],
+  "n_completed_seeds": 4,
+  "missing_seeds": [
+    15
+  ],
+  "selected_features_summary": {
+    "per_seed": {
+      "17": 1765,
+      "43": 1770,
+      "66": 1778,
+      "86": 1764
+    },
+    "mean": 1769.25,
+    "std_ddof1": 6.4,
+    "min": 1764,
+    "max": 1778,
+    "n": 4
+  },
+  "updated_at": "2026-10-09T11:17:35",
+  "total_atoms": 1024,
+  "failed_seeds": [
+    15
+  ],
+  "ended_at": "20261009_111735",
+  "runs": [
+    {
+      "master_seed": 17,
+      "n_selected_features": 1765,
+      "n_scored_features": 10057,
+      "selection": "energy",
+      "energy": 0.99,
+      "min_features": 50,
+      "total_atoms": 1024,
+      "encoder_class": "WL",
+      "dict_learner_class": "FrozenKSVDLearnerGPU",
+      "derived_seeds": {
+        "split": 481830384,
+        "encoder": 331279163,
+        "dict_learner": 981985333,
+        "classifier": 3085826624
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-10-09T11:15:42",
+      "kept_fraction": 0.1755,
+      "seed_total_sec": 35.457
+    },
+    {
+      "master_seed": 43,
+      "n_selected_features": 1770,
+      "n_scored_features": 10096,
+      "selection": "energy",
+      "energy": 0.99,
+      "min_features": 50,
+      "total_atoms": 1024,
+      "encoder_class": "WL",
+      "dict_learner_class": "FrozenKSVDLearnerGPU",
+      "derived_seeds": {
+        "split": 3994432209,
+        "encoder": 2044548950,
+        "dict_learner": 822718314,
+        "classifier": 4035392203
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-10-09T11:16:20",
+      "kept_fraction": 0.175317,
+      "seed_total_sec": 34.242
+    },
+    {
+      "master_seed": 66,
+      "n_selected_features": 1778,
+      "n_scored_features": 10134,
+      "selection": "energy",
+      "energy": 0.99,
+      "min_features": 50,
+      "total_atoms": 1024,
+      "encoder_class": "WL",
+      "dict_learner_class": "FrozenKSVDLearnerGPU",
+      "derived_seeds": {
+        "split": 4171953008,
+        "encoder": 3755636063,
+        "dict_learner": 3831674838,
+        "classifier": 1791996193
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-10-09T11:15:04",
+      "kept_fraction": 0.175449,
+      "seed_total_sec": 35.344
+    },
+    {
+      "master_seed": 86,
+      "n_selected_features": 1764,
+      "n_scored_features": 10161,
+      "selection": "energy",
+      "energy": 0.99,
+      "min_features": 50,
+      "total_atoms": 1024,
+      "encoder_class": "WL",
+      "dict_learner_class": "FrozenKSVDLearnerGPU",
+      "derived_seeds": {
+        "split": 985940846,
+        "encoder": 3831900635,
+        "dict_learner": 3844341792,
+        "classifier": 3252683230
+      },
+      "split_sizes": {
+        "vocab_train": 18467,
+        "ml_train": 7388,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-10-09T11:17:15",
+      "kept_fraction": 0.173605,
+      "seed_total_sec": 33.722
+    }
+  ]
+}

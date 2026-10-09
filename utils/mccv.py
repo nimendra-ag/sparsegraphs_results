@@ -60,7 +60,7 @@ from utils import pipeline
 # reclaims 100% of its RAM and destroys the CUDA context, so all VRAM —
 # including fragmentation and any driver spill into shared memory — is
 # returned. This is why seed 5 runs as fast as seed 1 (no cross-seed leak).
-N_SEEDS = 3
+N_SEEDS = 5
 
 
 def default_master_seeds(n=N_SEEDS):
