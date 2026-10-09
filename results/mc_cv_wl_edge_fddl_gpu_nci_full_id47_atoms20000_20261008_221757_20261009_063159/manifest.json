@@ -1,0 +1,71 @@
+{
+  "implementation": "wl_edge_fddl_gpu",
+  "dataset": "nci_full",
+  "dataset_id": 47,
+  "started_at": "20261008_221757",
+  "planned_seeds": [
+    31,
+    86,
+    54
+  ],
+  "n_planned_seeds": 3,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "completed_seeds": [
+    31
+  ],
+  "n_completed_seeds": 1,
+  "missing_seeds": [
+    86,
+    54
+  ],
+  "selected_features_summary": {
+    "per_seed": {
+      "31": 17131
+    },
+    "mean": 17131.0,
+    "std_ddof1": 0.0,
+    "min": 17131,
+    "max": 17131,
+    "n": 1
+  },
+  "updated_at": "2026-10-09T06:31:59",
+  "total_atoms": 20000,
+  "failed_seeds": [
+    86,
+    54
+  ],
+  "ended_at": "20261009_063159",
+  "runs": [
+    {
+      "master_seed": 31,
+      "n_selected_features": 17131,
+      "n_scored_features": 88050,
+      "selection": "energy",
+      "energy": 0.99,
+      "min_features": 50,
+      "total_atoms": 20000,
+      "encoder_class": "EdgeWL",
+      "dict_learner_class": "FDDLGPU",
+      "derived_seeds": {
+        "split": 2523303487,
+        "encoder": 2774764755,
+        "dict_learner": 2905164848,
+        "classifier": 902140752
+      },
+      "split_sizes": {
+        "vocab_train": 18427,
+        "ml_train": 7372,
+        "val": 5529,
+        "test": 5529
+      },
+      "completed_at": "2026-10-09T01:58:29",
+      "kept_fraction": 0.19456,
+      "seed_total_sec": 16925.757
+    }
+  ]
+}
