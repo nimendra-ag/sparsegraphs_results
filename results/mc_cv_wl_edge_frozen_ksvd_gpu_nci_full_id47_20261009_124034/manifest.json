@@ -1,0 +1,46 @@
+{
+  "implementation": "wl_edge_frozen_ksvd_gpu",
+  "dataset": "nci_full",
+  "dataset_id": 47,
+  "started_at": "20261009_124034",
+  "planned_seeds": [
+    42,
+    2,
+    27
+  ],
+  "n_planned_seeds": 3,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "runs": [
+    {
+      "master_seed": 42,
+      "n_selected_features": 17127,
+      "n_scored_features": 87877,
+      "selection": "energy",
+      "energy": 0.99,
+      "min_features": 50,
+      "total_atoms": 2048,
+      "encoder_class": "EdgeWL",
+      "dict_learner_class": "FrozenKSVDLearnerGPU",
+      "derived_seeds": {
+        "split": 3444837047,
+        "encoder": 2669555309,
+        "dict_learner": 2046530742,
+        "classifier": 3581440988
+      },
+      "split_sizes": {
+        "vocab_train": 18427,
+        "ml_train": 7372,
+        "val": 5529,
+        "test": 5529
+      },
+      "completed_at": "2026-10-09T12:58:30",
+      "kept_fraction": 0.194897,
+      "seed_total_sec": 1118.918
+    }
+  ]
+}
