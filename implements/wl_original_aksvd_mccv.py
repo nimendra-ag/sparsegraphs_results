@@ -41,8 +41,8 @@ DATASET = "nci_full"
 # NCI screen to benchmark (1, 33, 41, 47, 81, 83, 109, 123, 145); override on
 # the command line with --dataset-id. It lands in the run folder name
 # ("mc_cv_wl_aksvd_nci_full_id33_...") and in the run manifest.
-DATASET_ID = 33
-IMPLEMENTATION = "wl_aksvd"
+DATASET_ID = 81
+IMPLEMENTATION = "wl_original_aksvd"
 
 
 if __name__ == "__main__":
