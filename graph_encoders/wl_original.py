@@ -13,9 +13,9 @@ class WL_Original(GraphEncoder):
     def __init__(
             self,
             wl_iterations: int = 2,
-            attributed: bool = False,
-            erase_base_features: bool = False,
-            n_vocab: int = 1000,
+            attributed: bool = True,
+            erase_base_features: bool = True,
+            n_vocab: int = 1800,
             min_count: int = 1,
             epochs: int = 10,
             seed: int = 42
