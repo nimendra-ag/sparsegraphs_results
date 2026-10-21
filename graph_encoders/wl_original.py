@@ -16,7 +16,7 @@ class WL_Original(GraphEncoder):
             attributed: bool = False,
             erase_base_features: bool = False,
             n_vocab: int = 1000,
-            min_count: int = 5,
+            min_count: int = 1,
             epochs: int = 10,
             seed: int = 42
     ):
@@ -146,7 +146,7 @@ class WL_Original(GraphEncoder):
             attributed=config["attributed"],
             erase_base_features=config["erase_base_features"],
             n_vocab=config["n_vocab"],
-            min_count=config.get("min_count", 5),
+            min_count=config.get("min_count", 1),
             epochs=config.get("epochs", 10),
             seed=config["seed"],
         )
