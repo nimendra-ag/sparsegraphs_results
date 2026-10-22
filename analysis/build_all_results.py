@@ -11,8 +11,17 @@ repeated-evaluation run at all, its single-split runs are dropped entirely.
 Mixing the two inside one method would put a 1-draw estimate and a 5-draw mean
 in the same column with nothing to tell them apart.
 
-Baselines (SF, graph2vec, GCN) land in the same schema with family=baseline and
-an empty encoder/dict_learner; `method` is populated for every row.
+One row per (method, dataset_id, atoms, classifier). Each metric is the mean
+over seeds (std over seeds for STD_METRICS); individual seeds never appear.
+When several repeated runs cover the same cell (a re-run, or a resumed run that
+finished the seeds an earlier one failed), their seeds are pooled into one
+mean. A seed present in more than one run is counted once, from the later run.
+Runs that never finished a seed (manifest only) are skipped.
+
+Rows are grouped method -> dataset_id -> atoms -> classifier. Baselines (SF,
+graph2vec, GCN) come last, in the same schema with family=baseline and an empty
+encoder/dict_learner; `method` is populated for every row. Methods with no run
+at all get no row; they are listed in build_report.txt instead.
 
 Run:  python analysis/build_all_results.py
 Out:  analysis/all_results.csv, analysis/build_report.txt
@@ -161,6 +170,7 @@ def classify_status(vals: dict) -> str:
 
 
 def read_repeated(run_dir: Path):
+    """Per-seed rows of one run: ({seed: row}, arms), with fit time folded in."""
     per_run = run_dir / "per_run_metrics.csv"
     if not per_run.exists():
         return None, "no per_run_metrics.csv"
@@ -182,14 +192,28 @@ def read_repeated(run_dir: Path):
     if not expected & header:
         return None, "legacy metric schema"
 
+    fit = {}
+    timings = run_dir / "per_run_timings.csv"
+    if timings.exists():
+        with timings.open(newline="") as fh:
+            for r in csv.DictReader(fh):
+                fit[r.get("master_seed")] = _num(r.get("fit_encoder_dict"))
+
+    seeds = {}
+    for i, r in enumerate(rows):
+        seed = r.get("master_seed") or f"row{i}"
+        seeds[seed] = {**r, "__fit__": fit.get(seed)}
+    return {"seeds": seeds, "arms": arms}, None
+
+
+def aggregate_seeds(seed_rows, arms):
+    """Mean and std over seeds, per arm and metric."""
     out = {}
     for arm in arms:
         per_metric = {}
         for col, name, _ in METRICS:
             key = f"{arm}/{name}"
-            if key not in header:
-                continue
-            vals = [v for v in (_num(r.get(key)) for r in rows) if v is not None]
+            vals = [v for v in (_num(r.get(key)) for r in seed_rows) if v is not None]
             if not vals:
                 continue
             per_metric[col] = (
@@ -198,26 +222,7 @@ def read_repeated(run_dir: Path):
             )
         if per_metric:
             out[arm] = per_metric
-    return (out or None), (None if out else "no usable classifier columns")
-
-
-def repeated_n(run_dir: Path) -> int:
-    per_run = run_dir / "per_run_metrics.csv"
-    if not per_run.exists():
-        return 0
-    with per_run.open(newline="") as fh:
-        return max(0, sum(1 for _ in fh) - 1)
-
-
-def repeated_fit_seconds(run_dir: Path):
-    path = run_dir / "summary_timings.csv"
-    if not path.exists():
-        return None
-    with path.open(newline="") as fh:
-        for row in csv.DictReader(fh):
-            if row.get("phase") == "fit_encoder_dict":
-                return _num(row.get("mean_sec"))
-    return None
+    return out
 
 
 # --------------------------------------------------------------------------
@@ -290,10 +295,32 @@ def read_single_split(run_dir: Path):
 # --------------------------------------------------------------------------
 
 
-def pick_best(candidates):
-    """Repeated beats single-split; then more seeds; then the later run."""
-    return max(candidates,
-               key=lambda c: (SOURCE_RANK[c["source"]], c["n_seeds"], c["run_started"]))
+def pick_latest(candidates):
+    """Single-split runs carry no seeds to pool: keep the later run."""
+    return max(candidates, key=lambda c: c["run_started"])
+
+
+def pool_repeated(runs, report, method, key):
+    """Union the seeds of every run in one cell; a repeated seed keeps the later run."""
+    seeds, origin = {}, {}
+    for run in sorted(runs, key=lambda c: c["run_started"]):
+        for seed, row in run["seeds"].items():
+            if seed in seeds:
+                report.append(
+                    f"SEED  {method} id={key[2]} atoms={key[1]}: seed {seed} in both "
+                    f"{origin[seed]} and {run['run_id']} -- kept the later run")
+            seeds[seed], origin[seed] = row, run["run_id"]
+    arms = sorted({a for run in runs for a in run["arms"]})
+    fits = [r["__fit__"] for r in seeds.values() if r.get("__fit__") is not None]
+    if len(runs) > 1:
+        report.append(
+            f"POOL  {method} id={key[2]} atoms={key[1]}: {len(runs)} runs -> "
+            f"{len(seeds)} unique seeds  ({', '.join(r['run_id'] for r in runs)})")
+    return {
+        "metrics": aggregate_seeds(list(seeds.values()), arms),
+        "n_seeds": len(seeds),
+        "fit_seconds": round(statistics.fmean(fits), 2) if fits else None,
+    }
 
 
 def main() -> None:
@@ -305,33 +332,36 @@ def main() -> None:
             report.append(f"SKIP  unparsed dirname     {label}/{run_dir.name}")
             return
         if not in_scope(info):
-            return
-        metrics, why = reader(run_dir)
-        if metrics is None:
+            # The harness only appends atoms/dim once a seed has finished, so a
+            # name without it is a run that aborted before producing anything.
+            why = "aborted (no atoms/dim)" if info["atoms"] is None else "out of scope"
             report.append(f"SKIP  {why:<24} {label}/{run_dir.name}")
             return
-        n = repeated_n(run_dir) if info["source"] in REPEATED else 1
-        cands.setdefault(
-            (info["method"], info["atoms"], info["dataset_id"]), []
-        ).append({
-            **info, "metrics": metrics, "n_seeds": n,
-            "fit_seconds": repeated_fit_seconds(run_dir) if info["source"] in REPEATED else None,
-            "run_id": run_dir.name,
-        })
+        data, why = reader(run_dir)
+        if data is None:
+            report.append(f"SKIP  {why:<24} {label}/{run_dir.name}")
+            return
+        entry = {**info, "run_id": run_dir.name}
+        if info["source"] in REPEATED:
+            entry.update(data)
+        else:
+            entry["metrics"] = data
+        cands.setdefault((info["method"], info["atoms"], info["dataset_id"]), []).append(entry)
 
     for run_dir in sorted((ROOT / "results").iterdir()):
         if not run_dir.is_dir():
             continue
-        name = run_dir.name
-        if name.startswith(("mc_cv_", "kfold_")):
+        if run_dir.name.startswith(("mc_cv_", "kfold_")):
             collect(run_dir, read_repeated, "results")
         else:
             # graph2vec writes a single-split report straight into results/
             collect(run_dir, read_single_split, "results")
 
-    for run_dir in sorted((ROOT / "artifacts").iterdir()):
-        if run_dir.is_dir():
-            collect(run_dir, read_single_split, "artifacts")
+    artifacts = ROOT / "artifacts"
+    if artifacts.is_dir():
+        for run_dir in sorted(artifacts.iterdir()):
+            if run_dir.is_dir():
+                collect(run_dir, read_single_split, "artifacts")
 
     # Per-method source preference, applied before any per-cell choice.
     best_source = {}
@@ -342,75 +372,87 @@ def main() -> None:
     fieldnames = (
         ["family", "method", "encoder", "dict_learner", "dict_learner_impl",
          "implementation", "dataset", "dataset_id", "atoms", "classifier",
-         "source", "n_seeds", "status"]
+         "source", "n_seeds", "n_runs", "status"]
         + [c for c, _, _ in METRICS]
         + [f"{c}_std" for c in STD_METRICS]
         + ["threshold", "fit_seconds", "run_started", "run_id"]
     )
 
-    methods = ([("pipeline", f"{e}+{d}") for e in ENCODERS for d in LEARNERS]
-               + [("baseline", b) for b in BASELINES])
+    # Known methods in canonical order, then anything unexpected, with every
+    # baseline after every pipeline.
+    known = ([("pipeline", f"{e}+{d}") for e in ENCODERS for d in LEARNERS]
+             + [("baseline", b) for b in BASELINES])
+    known_names = {m for _, m in known}
+    extra = sorted({k[0] for k in cands} - known_names)
+    methods = ([fm for fm in known if fm[0] == "pipeline"]
+               + [("pipeline", m) for m in extra]
+               + [fm for fm in known if fm[0] == "baseline"])
 
     out_rows, filled, missing = [], [], []
 
     for family, method in methods:
         keys = sorted((k for k in cands if k[0] == method),
-                      key=lambda k: (k[1], k[2] if k[2] is not None else -1))
+                      key=lambda k: (k[2] if k[2] is not None else -1, k[1]))
         rank = best_source.get(method, 0)
         emitted = False
 
         for key in keys:
             pool = [c for c in cands[key] if SOURCE_RANK[c["source"]] == rank]
-            if not pool:
-                for c in cands[key]:
+            for c in cands[key]:
+                if SOURCE_RANK[c["source"]] != rank:
                     report.append(
                         f"DROP  {c['run_id']} (source={c['source']}) -- "
                         f"{method} has a higher-ranked source available")
+            if not pool:
                 continue
-            chosen = pick_best(pool)
-            for other in cands[key]:
-                if other is not chosen:
-                    report.append(
-                        f"DEDUP dropped {other['run_id']} (source={other['source']}, "
-                        f"n={other['n_seeds']}) for {chosen['run_id']} "
-                        f"(source={chosen['source']}, n={chosen['n_seeds']})")
 
-            arms = [a for a in CLASSIFIER_ORDER if a in chosen["metrics"]]
-            arms += [a for a in sorted(chosen["metrics"]) if a not in CLASSIFIER_ORDER]
+            pool.sort(key=lambda c: c["run_started"])
+            first = pool[0]
+            repeated = first["source"] in REPEATED
+            if repeated:
+                agg = pool_repeated(pool, report, method, key)
+                used = pool
+            else:
+                chosen = pick_latest(pool)
+                for other in pool:
+                    if other is not chosen:
+                        report.append(f"DEDUP dropped {other['run_id']} for {chosen['run_id']}")
+                agg = {"metrics": chosen["metrics"], "n_seeds": 1, "fit_seconds": None}
+                used = [chosen]
+
+            arms = [a for a in CLASSIFIER_ORDER if a in agg["metrics"]]
+            arms += [a for a in sorted(agg["metrics"]) if a not in CLASSIFIER_ORDER]
             for arm in arms:
-                vals = chosen["metrics"][arm]
-                flat = {c: (vals[c][0] if chosen["source"] in REPEATED else vals.get(c))
+                vals = agg["metrics"][arm]
+                flat = {c: (vals[c][0] if repeated else vals.get(c))
                         for c, _, _ in METRICS if c in vals}
                 row = {
                     "family": family, "method": method,
-                    "encoder": chosen["encoder"], "dict_learner": chosen["dict_learner"],
-                    "dict_learner_impl": chosen["dict_learner_impl"],
-                    "implementation": chosen["implementation"], "dataset": chosen["dataset"],
-                    "dataset_id": chosen.get("dataset_id") if chosen.get("dataset_id") is not None else "",
-                    "atoms": chosen["atoms"], "classifier": arm,
-                    "source": chosen["source"], "n_seeds": chosen["n_seeds"],
+                    "encoder": first["encoder"], "dict_learner": first["dict_learner"],
+                    "dict_learner_impl": first["dict_learner_impl"],
+                    "implementation": first["implementation"], "dataset": first["dataset"],
+                    "dataset_id": first["dataset_id"] if first["dataset_id"] is not None else "",
+                    "atoms": first["atoms"], "classifier": arm,
+                    "source": first["source"], "n_seeds": agg["n_seeds"],
+                    "n_runs": len(used),
                     "status": classify_status(flat),
-                    "threshold": "", "fit_seconds": chosen.get("fit_seconds") or "",
-                    "run_started": chosen["run_started"], "run_id": chosen["run_id"],
+                    "threshold": "",
+                    "fit_seconds": agg["fit_seconds"] if agg["fit_seconds"] is not None else "",
+                    "run_started": used[0]["run_started"],
+                    "run_id": ";".join(c["run_id"] for c in used),
                 }
                 for col, _, _ in METRICS:
                     v = flat.get(col)
                     row[col] = round(v, 6) if v is not None else ""
                 for col in STD_METRICS:
-                    sd = vals.get(col)[1] if (chosen["source"] in REPEATED and col in vals) else None
+                    sd = vals.get(col)[1] if (repeated and col in vals) else None
                     row[f"{col}_std"] = round(sd, 6) if sd is not None else ""
-                if chosen["source"] == "artifact" and vals.get("threshold") is not None:
+                if not repeated and vals.get("threshold") is not None:
                     row["threshold"] = round(vals["threshold"], 6)
                 out_rows.append(row)
                 emitted = True
 
         (filled if emitted else missing).append(method)
-        if not emitted:
-            out_rows.append({**{f: "" for f in fieldnames}, "family": family,
-                             "method": method, "dataset": DATASET, "source": "missing",
-                             "encoder": method.split("+")[0] if "+" in method else "",
-                             "dict_learner": method.split("+")[1] if "+" in method else "",
-                             "implementation": method.replace("+", "_")})
 
     OUT_CSV.parent.mkdir(parents=True, exist_ok=True)
     with OUT_CSV.open("w", newline="", encoding="utf-8") as fh:
@@ -419,22 +461,26 @@ def main() -> None:
         writer.writerows(out_rows)
 
     counts = {s: sum(1 for r in out_rows if r["source"] == s)
-              for s in ("mccv", "kfold", "artifact", "missing")}
+              for s in ("mccv", "kfold", "artifact")}
     degen = [r for r in out_rows if r["status"] == "degenerate"]
+    low_n = sorted({(r["method"], r["dataset_id"], r["atoms"], r["n_seeds"])
+                    for r in out_rows if r["source"] in REPEATED and r["n_seeds"] < 3})
 
     summary = [
         f"rows written        : {len(out_rows)}  -> {OUT_CSV.relative_to(ROOT)}",
         *[f"  source={s:<10}: {n}" for s, n in counts.items()],
-        f"methods filled      : {len(filled)} / {len(methods)}",
-        f"methods empty       : {missing}",
+        f"methods with results: {filled}",
+        f"methods with no run : {missing}",
         f"degenerate rows     : {len(degen)}"
         + (f"  ({sorted({r['method'] for r in degen})})" if degen else ""),
+        f"cells with < 3 seeds: {len(low_n)}",
+        *[f"  {m} id={i} atoms={a}: n={n}" for m, i, a, n in low_n],
         "",
-        "notes / skips / dedup decisions:",
+        "notes / skips / pooling decisions:",
     ] + (report or ["  (none)"])
 
     OUT_REPORT.write_text("\n".join(summary) + "\n", encoding="utf-8")
-    print("\n".join(summary[:8]))
+    print("\n".join(summary))
 
 
 if __name__ == "__main__":
