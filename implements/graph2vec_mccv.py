@@ -44,12 +44,12 @@ from graph2vec.graph2vec import Graph2Vec
 
 
 DATASET = "nci_full"
-DATASET_ID = 47
+DATASET_ID = 1
 IMPLEMENTATION = "graph2vec"
 
 MASTER_SEEDS = mccv.default_master_seeds()
 
-DIMENSIONS = 1024
+DIMENSIONS = 256
 WL_ITERATIONS = 2
 EPOCHS = 100
 LEARNING_RATE = 0.025
