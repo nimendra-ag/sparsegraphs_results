@@ -1,0 +1,159 @@
+{
+  "implementation": "graph2vec",
+  "dataset": "nci_full",
+  "dataset_id": 1,
+  "started_at": "20261027_123000",
+  "planned_seeds": [
+    17,
+    32,
+    83,
+    69,
+    53
+  ],
+  "n_planned_seeds": 5,
+  "split_policy": {
+    "vocab_train": 0.5,
+    "ml_train": 0.2,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "completed_seeds": [
+    17,
+    32,
+    53,
+    69,
+    83
+  ],
+  "n_completed_seeds": 5,
+  "missing_seeds": [],
+  "selected_features_summary": {
+    "per_seed": {
+      "17": 512,
+      "32": 512,
+      "53": 512,
+      "69": 512,
+      "83": 512
+    },
+    "mean": 512.0,
+    "std_ddof1": 0.0,
+    "min": 512,
+    "max": 512,
+    "n": 5
+  },
+  "updated_at": "2026-10-27T13:23:30",
+  "total_atoms": 512,
+  "failed_seeds": [],
+  "ended_at": "20261027_132330",
+  "runs": [
+    {
+      "master_seed": 17,
+      "n_selected_features": 512,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 512,
+      "encoder_class": "Graph2Vec",
+      "dict_learner_class": null,
+      "derived_seeds": {
+        "split": 481830384,
+        "classifier": 3085826624
+      },
+      "split_sizes": {
+        "train": 25855,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-10-27T12:30:47",
+      "seed_total_sec": 637.535
+    },
+    {
+      "master_seed": 32,
+      "n_selected_features": 512,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 512,
+      "encoder_class": "Graph2Vec",
+      "dict_learner_class": null,
+      "derived_seeds": {
+        "split": 3319264766,
+        "classifier": 1057995257
+      },
+      "split_sizes": {
+        "train": 25855,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-10-27T12:41:25",
+      "seed_total_sec": 630.757
+    },
+    {
+      "master_seed": 53,
+      "n_selected_features": 512,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 512,
+      "encoder_class": "Graph2Vec",
+      "dict_learner_class": null,
+      "derived_seeds": {
+        "split": 4016521393,
+        "classifier": 2650707634
+      },
+      "split_sizes": {
+        "train": 25855,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-10-27T13:13:00",
+      "seed_total_sec": 630.751
+    },
+    {
+      "master_seed": 69,
+      "n_selected_features": 512,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 512,
+      "encoder_class": "Graph2Vec",
+      "dict_learner_class": null,
+      "derived_seeds": {
+        "split": 1224679019,
+        "classifier": 4099649580
+      },
+      "split_sizes": {
+        "train": 25855,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-10-27T13:02:31",
+      "seed_total_sec": 628.666
+    },
+    {
+      "master_seed": 83,
+      "n_selected_features": 512,
+      "n_scored_features": null,
+      "selection": null,
+      "energy": null,
+      "min_features": null,
+      "total_atoms": 512,
+      "encoder_class": "Graph2Vec",
+      "dict_learner_class": null,
+      "derived_seeds": {
+        "split": 1521106599,
+        "classifier": 2952730631
+      },
+      "split_sizes": {
+        "train": 25855,
+        "val": 5541,
+        "test": 5541
+      },
+      "completed_at": "2026-10-27T12:51:56",
+      "seed_total_sec": 635.441
+    }
+  ]
+}
